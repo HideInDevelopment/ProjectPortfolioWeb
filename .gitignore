@@ -1,0 +1,15 @@
+/.idea
+
+/PortfolioWeb.Domain/bin
+/PortfolioWeb.Domain/obj
+
+/PortfolioWeb.Infrastructure/bin
+/PortfolioWeb.Infrastructure/obj
+
+/PortfolioWeb.Application/bin
+/PortfolioWeb.Application/obj
+
+/PortfolioWeb.Api/bin
+/PortfolioWeb.Api/obj
+/PortfolioWeb.Api/appsettings.json
+/PortfolioWeb.Api/appsettings.development.json
