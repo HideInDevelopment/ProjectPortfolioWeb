@@ -2,15 +2,35 @@ namespace PortfolioWeb.Domain.Entities;
 
 public class Project
 {
+    public Project(
+        Guid id,
+        string title,
+        string description,
+        DateTimeOffset releaseDate,
+        int version,
+        Guid authorId,
+        bool isInDevelopment)
+    {
+        Id = id;
+        Title = title;
+        Description = description;
+        ReleaseDate = releaseDate;
+        Version = version;
+        AuthorId = authorId;
+        IsInDevelopment = isInDevelopment;
+    }
+
     public Guid Id { get; set; }
 
-    public required string Title { get; set; }
+    public string Title { get; set; }
 
-    public required string Description { get; set; }
+    public string Description { get; set; }
 
     public DateTimeOffset ReleaseDate { get; set; }
 
     public int Version { get; set; }
 
     public Guid AuthorId { get; set; }
+
+    public bool IsInDevelopment { get; set; }
 }
