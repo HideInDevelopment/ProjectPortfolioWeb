@@ -19,3 +19,5 @@
 /PortfolioWeb.Api/obj
 /PortfolioWeb.Api/appsettings.json
 /PortfolioWeb.Api/appsettings.development.json
+
+.docker
