@@ -11,6 +11,9 @@
 /PortfolioWeb.Application/bin
 /PortfolioWeb.Application/obj
 
+/PortfolioWeb.Application.Contract/bin
+/PortfolioWeb.Application.Contract/obj
+
 /PortfolioWeb.Api/bin
 /PortfolioWeb.Api/obj
 /PortfolioWeb.Api/appsettings.json
