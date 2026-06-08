@@ -19,7 +19,22 @@ public static class AuthorMapper
 
     public static Author MapToEntity(AuthorDTO authorDto)
     {
-        var author = new Author(authorDto.Id, authorDto.Name);
+        var author = new Author(authorDto.Name);
+        var projects = authorDto.Projects
+            .Select(ProjectMapper.MapToEntity)
+            .ToList();
+
+        foreach (var project in projects)
+        {
+            author.AddProject(project);
+        }
+
+        return author;
+    }
+
+    public static Author MapToEntity(CreateAuthorDTO authorDto)
+    {
+        var author = new Author(authorDto.Name);
         var projects = authorDto.Projects
             .Select(ProjectMapper.MapToEntity)
             .ToList();

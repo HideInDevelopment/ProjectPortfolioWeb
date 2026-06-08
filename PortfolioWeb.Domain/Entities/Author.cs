@@ -10,9 +10,8 @@ public class Author
         _projects = [];
     }
 
-    public Author(Guid id, string name)
+    public Author(string name)
     {
-        Id = id;
         Name = name;
         _projects = [];
     }

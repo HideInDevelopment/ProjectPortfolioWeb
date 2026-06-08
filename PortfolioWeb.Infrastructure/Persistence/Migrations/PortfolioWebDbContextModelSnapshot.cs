@@ -25,7 +25,9 @@ namespace PortfolioWeb.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("PortfolioWeb.Domain.Entities.Author", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -40,7 +42,9 @@ namespace PortfolioWeb.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("PortfolioWeb.Domain.Entities.Project", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("AuthorId")
                         .HasColumnType("uuid");

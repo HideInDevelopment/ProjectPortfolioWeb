@@ -22,7 +22,7 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
             .ToList();
     }
 
-    public async Task<AuthorDTO> Create(AuthorDTO authorDto, CancellationToken cancellationToken = default)
+    public async Task<AuthorDTO> Create(CreateAuthorDTO authorDto, CancellationToken cancellationToken = default)
     {
         var author = AuthorMapper.MapToEntity(authorDto);
         var createdAuthor = await authorRepository.Create(author, cancellationToken);
@@ -30,9 +30,11 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
         return AuthorMapper.MapToDTO(createdAuthor);
     }
 
-    public async Task<AuthorDTO> Update(AuthorDTO authorDto, CancellationToken cancellationToken = default)
+    public async Task<AuthorDTO> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken = default)
     {
         var author = AuthorMapper.MapToEntity(authorDto);
+        author.Id = id;
+
         var updatedAuthor = await authorRepository.Update(author, cancellationToken);
 
         return AuthorMapper.MapToDTO(updatedAuthor);

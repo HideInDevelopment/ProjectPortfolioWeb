@@ -25,7 +25,7 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<AuthorDTO>> Create(AuthorDTO authorDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDTO>> Create(CreateAuthorDTO authorDto, CancellationToken cancellationToken)
     {
         var createdAuthor = await authorService.Create(authorDto, cancellationToken);
 
@@ -33,11 +33,9 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<AuthorDTO>> Update(Guid id, AuthorDTO authorDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDTO>> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken)
     {
-        authorDto.Id = id;
-
-        var updatedAuthor = await authorService.Update(authorDto, cancellationToken);
+        var updatedAuthor = await authorService.Update(id, authorDto, cancellationToken);
 
         return Ok(updatedAuthor);
     }

@@ -25,7 +25,7 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ProjectDTO>> Create(ProjectDTO projectDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectDTO>> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken)
     {
         var createdProject = await projectService.Create(projectDto, cancellationToken);
 
@@ -33,11 +33,9 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<ProjectDTO>> Update(Guid id, ProjectDTO projectDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectDTO>> Update(Guid id, CreateProjectDTO projectDto, CancellationToken cancellationToken)
     {
-        projectDto.Id = id;
-
-        var updatedProject = await projectService.Update(projectDto, cancellationToken);
+        var updatedProject = await projectService.Update(id, projectDto, cancellationToken);
 
         return Ok(updatedProject);
     }

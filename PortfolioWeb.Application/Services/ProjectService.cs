@@ -22,7 +22,7 @@ public class ProjectService(IProjectRepository projectRepository) : IProjectServ
             .ToList();
     }
 
-    public async Task<ProjectDTO> Create(ProjectDTO projectDto, CancellationToken cancellationToken = default)
+    public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
     {
         var project = ProjectMapper.MapToEntity(projectDto);
         var createdProject = await projectRepository.Create(project, cancellationToken);
@@ -30,9 +30,11 @@ public class ProjectService(IProjectRepository projectRepository) : IProjectServ
         return ProjectMapper.MapToDTO(createdProject);
     }
 
-    public async Task<ProjectDTO> Update(ProjectDTO projectDto, CancellationToken cancellationToken = default)
+    public async Task<ProjectDTO> Update(Guid id, CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
     {
         var project = ProjectMapper.MapToEntity(projectDto);
+        project.Id = id;
+
         var updatedProject = await projectRepository.Update(project, cancellationToken);
 
         return ProjectMapper.MapToDTO(updatedProject);

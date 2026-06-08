@@ -13,7 +13,8 @@ public class AuthorEntityTypeConfiguration : IEntityTypeConfiguration<Author>
         builder.HasKey(author => author.Id);
 
         builder.Property(author => author.Id)
-            .ValueGeneratedNever();
+            .ValueGeneratedOnAdd()
+            .HasDefaultValueSql("gen_random_uuid()");
 
         builder.Property(author => author.Name)
             .HasMaxLength(200)

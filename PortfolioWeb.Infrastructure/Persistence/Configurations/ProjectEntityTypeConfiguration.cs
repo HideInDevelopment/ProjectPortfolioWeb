@@ -13,7 +13,8 @@ public class ProjectEntityTypeConfiguration : IEntityTypeConfiguration<Project>
         builder.HasKey(project => project.Id);
 
         builder.Property(project => project.Id)
-            .ValueGeneratedNever();
+            .ValueGeneratedOnAdd()
+            .HasDefaultValueSql("gen_random_uuid()");
 
         builder.Property(project => project.Title)
             .HasMaxLength(200)

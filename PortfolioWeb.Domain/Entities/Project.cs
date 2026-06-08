@@ -9,7 +9,6 @@ public class Project
     }
 
     public Project(
-        Guid id,
         string title,
         string description,
         DateTimeOffset releaseDate,
@@ -17,7 +16,6 @@ public class Project
         Guid authorId,
         bool isInDevelopment)
     {
-        Id = id;
         Title = title;
         Description = description;
         ReleaseDate = releaseDate;

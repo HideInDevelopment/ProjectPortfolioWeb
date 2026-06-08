@@ -22,7 +22,17 @@ public static class ProjectMapper
     public static Project MapToEntity(ProjectDTO projectDto)
     {
         return new Project(
-            projectDto.Id,
+            projectDto.Title,
+            projectDto.Description,
+            projectDto.ReleaseDate,
+            projectDto.Version,
+            projectDto.AuthorId,
+            projectDto.IsInDevelopment);
+    }
+
+    public static Project MapToEntity(CreateProjectDTO projectDto)
+    {
+        return new Project(
             projectDto.Title,
             projectDto.Description,
             projectDto.ReleaseDate,
