@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using PortfolioWeb.Application.Contract.Serialization;
+
 namespace PortfolioWeb.Application.Contract.DTOs;
 
 public class ProjectDTO
@@ -8,6 +11,7 @@ public class ProjectDTO
 
     public string Description { get; set; } = string.Empty;
 
+    [JsonConverter(typeof(FlexibleDateTimeOffsetJsonConverter))]
     public DateTimeOffset ReleaseDate { get; set; }
 
     public int Version { get; set; }

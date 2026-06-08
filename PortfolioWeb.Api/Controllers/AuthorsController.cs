@@ -25,7 +25,7 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<AuthorDTO>> Create(CreateAuthorDTO authorDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDTO>> Create([FromBody] CreateAuthorDTO authorDto, CancellationToken cancellationToken)
     {
         var createdAuthor = await authorService.Create(authorDto, cancellationToken);
 
@@ -33,7 +33,7 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<AuthorDTO>> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDTO>> Update(Guid id, [FromBody] CreateAuthorDTO authorDto, CancellationToken cancellationToken)
     {
         var updatedAuthor = await authorService.Update(id, authorDto, cancellationToken);
 
