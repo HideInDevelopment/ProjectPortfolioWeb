@@ -2,6 +2,12 @@ namespace PortfolioWeb.Domain.Entities;
 
 public class Project
 {
+    private Project()
+    {
+        Title = string.Empty;
+        Description = string.Empty;
+    }
+
     public Project(
         Guid id,
         string title,

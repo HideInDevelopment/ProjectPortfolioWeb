@@ -5,6 +5,10 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>PortfolioWeb</RootNamespace>
-    </PropertyGroup>
+</PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PortfolioWeb.Infrastructure\PortfolioWeb.Infrastructure.csproj" />
+    </ItemGroup>
 
 </Project>

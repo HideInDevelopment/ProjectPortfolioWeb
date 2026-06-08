@@ -4,6 +4,12 @@ public class Author
 {
     private readonly List<Project> _projects;
 
+    private Author()
+    {
+        Name = string.Empty;
+        _projects = [];
+    }
+
     public Author(Guid id, string name)
     {
         Id = id;
