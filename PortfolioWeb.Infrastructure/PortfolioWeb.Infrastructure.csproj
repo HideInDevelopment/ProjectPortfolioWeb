@@ -7,6 +7,7 @@
 </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\PortfolioWeb.Domain.Contract\PortfolioWeb.Domain.Contract.csproj" />
         <ProjectReference Include="..\PortfolioWeb.Domain\PortfolioWeb.Domain.csproj" />
     </ItemGroup>
 
