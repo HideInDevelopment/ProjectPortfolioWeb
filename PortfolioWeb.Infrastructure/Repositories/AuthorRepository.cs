@@ -29,24 +29,35 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
         return author;
     }
 
-    public async Task<Author> Update(Author author, CancellationToken cancellationToken = default)
+    public async Task<Author?> Update(Author author, CancellationToken cancellationToken = default)
     {
-        dbContext.Authors.Update(author);
+        var existingAuthor = await dbContext.Authors
+            .Include(x => x.Projects)
+            .FirstOrDefaultAsync(x => x.Id == author.Id, cancellationToken);
+
+        if (existingAuthor is null)
+        {
+            return null;
+        }
+
+        dbContext.Entry(existingAuthor).CurrentValues.SetValues(author);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return author;
+        return existingAuthor;
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
     {
         var author = await dbContext.Authors.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         if (author is null)
         {
-            return;
+            return false;
         }
 
         dbContext.Authors.Remove(author);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 }

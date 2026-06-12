@@ -10,7 +10,7 @@ public interface IAuthorService
 
     Task<AuthorDTO> Create(CreateAuthorDTO authorDto, CancellationToken cancellationToken = default);
 
-    Task<AuthorDTO> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken = default);
+    Task<AuthorDTO?> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken = default);
 
-    Task Delete(Guid id, CancellationToken cancellationToken = default);
+    Task<bool> Delete(Guid id, CancellationToken cancellationToken = default);
 }

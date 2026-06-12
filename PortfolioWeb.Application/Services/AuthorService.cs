@@ -30,18 +30,18 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
         return AuthorMapper.MapToDTO(createdAuthor);
     }
 
-    public async Task<AuthorDTO> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken = default)
+    public async Task<AuthorDTO?> Update(Guid id, CreateAuthorDTO authorDto, CancellationToken cancellationToken = default)
     {
         var author = AuthorMapper.MapToEntity(authorDto);
         author.Id = id;
 
         var updatedAuthor = await authorRepository.Update(author, cancellationToken);
 
-        return AuthorMapper.MapToDTO(updatedAuthor);
+        return updatedAuthor is null ? null : AuthorMapper.MapToDTO(updatedAuthor);
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
     {
-        await authorRepository.Delete(id, cancellationToken);
+        return await authorRepository.Delete(id, cancellationToken);
     }
 }

@@ -10,7 +10,7 @@ public interface IAuthorRepository
 
     Task<Author> Create(Author author, CancellationToken cancellationToken = default);
 
-    Task<Author> Update(Author author, CancellationToken cancellationToken = default);
+    Task<Author?> Update(Author author, CancellationToken cancellationToken = default);
 
-    Task Delete(Guid id, CancellationToken cancellationToken = default);
+    Task<bool> Delete(Guid id, CancellationToken cancellationToken = default);
 }
