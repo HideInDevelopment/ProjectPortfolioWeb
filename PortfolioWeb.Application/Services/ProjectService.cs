@@ -30,18 +30,18 @@ public class ProjectService(IProjectRepository projectRepository) : IProjectServ
         return ProjectMapper.MapToDTO(createdProject);
     }
 
-    public async Task<ProjectDTO> Update(Guid id, CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
+    public async Task<ProjectDTO?> Update(Guid id, CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
     {
         var project = ProjectMapper.MapToEntity(projectDto);
         project.Id = id;
 
         var updatedProject = await projectRepository.Update(project, cancellationToken);
 
-        return ProjectMapper.MapToDTO(updatedProject);
+        return updatedProject is null ? null : ProjectMapper.MapToDTO(updatedProject);
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
     {
-        await projectRepository.Delete(id, cancellationToken);
+        return await projectRepository.Delete(id, cancellationToken);
     }
 }

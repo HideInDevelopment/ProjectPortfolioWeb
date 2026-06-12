@@ -26,24 +26,34 @@ public class ProjectRepository(PortfolioWebDbContext dbContext) : IProjectReposi
         return project;
     }
 
-    public async Task<Project> Update(Project project, CancellationToken cancellationToken = default)
+    public async Task<Project?> Update(Project project, CancellationToken cancellationToken = default)
     {
-        dbContext.Projects.Update(project);
+        var existingProject = await dbContext.Projects
+            .FirstOrDefaultAsync(x => x.Id == project.Id, cancellationToken);
+
+        if (existingProject is null)
+        {
+            return null;
+        }
+
+        dbContext.Entry(existingProject).CurrentValues.SetValues(project);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return project;
+        return existingProject;
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
     {
         var project = await dbContext.Projects.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         if (project is null)
         {
-            return;
+            return false;
         }
 
         dbContext.Projects.Remove(project);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 }

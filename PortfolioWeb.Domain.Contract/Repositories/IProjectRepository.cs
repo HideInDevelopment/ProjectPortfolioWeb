@@ -10,7 +10,7 @@ public interface IProjectRepository
 
     Task<Project> Create(Project project, CancellationToken cancellationToken = default);
 
-    Task<Project> Update(Project project, CancellationToken cancellationToken = default);
+    Task<Project?> Update(Project project, CancellationToken cancellationToken = default);
 
-    Task Delete(Guid id, CancellationToken cancellationToken = default);
+    Task<bool> Delete(Guid id, CancellationToken cancellationToken = default);
 }
