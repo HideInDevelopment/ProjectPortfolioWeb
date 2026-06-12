@@ -5,9 +5,8 @@ namespace PortfolioWeb.Application;
 
 public static class AuthorMapper
 {
-    public static AuthorDTO MapToDTO(Author author)
-    {
-        return new AuthorDTO
+    public static AuthorDTO MapToDTO(Author author) =>
+        new()
         {
             Id = author.Id,
             Name = author.Name,
@@ -15,35 +14,6 @@ public static class AuthorMapper
                 .Select(ProjectMapper.MapToDTO)
                 .ToList()
         };
-    }
 
-    public static Author MapToEntity(AuthorDTO authorDto)
-    {
-        var author = new Author(authorDto.Name);
-        var projects = authorDto.Projects
-            .Select(ProjectMapper.MapToEntity)
-            .ToList();
-
-        foreach (var project in projects)
-        {
-            author.AddProject(project);
-        }
-
-        return author;
-    }
-
-    public static Author MapToEntity(CreateAuthorDTO authorDto)
-    {
-        var author = new Author(authorDto.Name);
-        var projects = authorDto.Projects
-            .Select(ProjectMapper.MapToEntity)
-            .ToList();
-
-        foreach (var project in projects)
-        {
-            author.AddProject(project);
-        }
-
-        return author;
-    }
+    public static Author MapToEntity(PersistAuthorDTO authorDto) => new(authorDto.Name);
 }
