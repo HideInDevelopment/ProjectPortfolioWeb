@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
 
 namespace PortfolioWeb.Api.Controllers;
@@ -24,25 +25,21 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ProjectDTO?>> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectDTO>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateProjectId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
             var project = await projectService.GetById(id, cancellationToken);
 
-            if (project is null)
-            {
-                return NotFound();
-            }
-
             return Ok(project);
+        }
+        catch (InvalidProjectIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (ProjectNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
@@ -68,23 +65,19 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProjectDTO>> Update(Guid id, [FromBody] UpdateProjectDTO projectDto, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateProjectId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
             var updatedProject = await projectService.Update(id, projectDto, cancellationToken);
 
-            if (updatedProject is null)
-            {
-                return NotFound();
-            }
-
             return Ok(updatedProject);
+        }
+        catch (InvalidProjectIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (ProjectNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
@@ -95,34 +88,23 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateProjectId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
-            var wasDeleted = await projectService.Delete(id, cancellationToken);
-
-            if (!wasDeleted)
-            {
-                return NotFound();
-            }
+            await projectService.Delete(id, cancellationToken);
 
             return NoContent();
+        }
+        catch (InvalidProjectIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (ProjectNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
-    }
-
-    private ActionResult? ValidateProjectId(Guid id)
-    {
-        return id == Guid.Empty
-            ? BadRequest("The provided project id is not valid.")
-            : null;
     }
 }

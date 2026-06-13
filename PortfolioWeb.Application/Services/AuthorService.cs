@@ -72,8 +72,8 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
 
         var wasDeleted = await authorRepository.Delete(author, cancellationToken);
 
-        return !wasDeleted 
-            ? throw new Exception("An unexpected error occurred while deleting the author.") 
-            : true;
+        return wasDeleted 
+            ? true 
+            : throw new Exception("An unexpected error occurred while deleting the author.");
     }
 }
