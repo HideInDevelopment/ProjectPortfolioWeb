@@ -1,4 +1,5 @@
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Mappers;
@@ -6,7 +7,9 @@ using PortfolioWeb.Domain.Contract.Repositories;
 
 namespace PortfolioWeb.Application.Services;
 
-public class ProjectService(IProjectRepository projectRepository) : IProjectService
+public class ProjectService(
+    IProjectRepository projectRepository,
+    IAuthorRepository authorRepository) : IProjectService
 {
     public async Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default)
     {
@@ -33,6 +36,18 @@ public class ProjectService(IProjectRepository projectRepository) : IProjectServ
 
     public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
     {
+        if (projectDto.AuthorId == Guid.Empty)
+        {
+            throw new InvalidAuthorIdException();
+        }
+
+        var author = await authorRepository.GetById(projectDto.AuthorId, cancellationToken);
+
+        if (author is null)
+        {
+            throw new ReferencedAuthorNotFoundException(projectDto.AuthorId);
+        }
+
         var project = ProjectMapper.MapToEntity(projectDto);
         var createdProject = await projectRepository.Create(project, cancellationToken);
 
