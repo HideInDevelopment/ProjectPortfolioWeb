@@ -59,7 +59,7 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<ProjectDTO>> Update(Guid id, [FromBody] CreateProjectDTO projectDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectDTO>> Update(Guid id, [FromBody] UpdateProjectDTO projectDto, CancellationToken cancellationToken)
     {
         try
         {
