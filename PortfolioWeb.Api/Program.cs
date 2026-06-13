@@ -13,6 +13,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+// TODO: Review and update EF Core packages when a newer patched version is adopted to remove this temporary transitive package pin.
 
 var app = builder.Build();
 
