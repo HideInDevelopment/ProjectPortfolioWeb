@@ -1,5 +1,6 @@
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Services;
+using PortfolioWeb.Application.Mappers;
 using PortfolioWeb.Domain.Contract.Repositories;
 
 namespace PortfolioWeb.Application.Services;

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Services;
 
 namespace PortfolioWeb.Api.Controllers;
@@ -24,25 +25,21 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<AuthorDTO?>> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDTO>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateAuthorId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
             var author = await authorService.GetById(id, cancellationToken);
 
-            if (author is null)
-            {
-                return NotFound();
-            }
-
             return Ok(author);
+        }
+        catch (InvalidAuthorIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (AuthorNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
@@ -68,23 +65,19 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AuthorDTO>> Update(Guid id, [FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateAuthorId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
             var updatedAuthor = await authorService.Update(id, authorDto, cancellationToken);
 
-            if (updatedAuthor is null)
-            {
-                return NotFound();
-            }
-
             return Ok(updatedAuthor);
+        }
+        catch (InvalidAuthorIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (AuthorNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
@@ -95,29 +88,23 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var invalidIdResult = ValidateAuthorId(id);
-
-        if (invalidIdResult is not null)
-        {
-            return invalidIdResult;
-        }
-
         try
         {
-            var wasDeleted = await authorService.Delete(id, cancellationToken);
-
-            if (!wasDeleted)
-            {
-                return NotFound();
-            }
+            await authorService.Delete(id, cancellationToken);
 
             return NoContent();
+        }
+        catch (InvalidAuthorIdException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (AuthorNotFoundException exception)
+        {
+            return NotFound(exception.Message);
         }
         catch (Exception)
         {
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
     }
-
-    private ActionResult? ValidateAuthorId(Guid id) => id == Guid.Empty ? BadRequest("The provided author id is not valid.") : null;
 }

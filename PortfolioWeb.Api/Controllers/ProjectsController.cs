@@ -26,6 +26,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDTO?>> GetById(Guid id, CancellationToken cancellationToken)
     {
+        var invalidIdResult = ValidateProjectId(id);
+
+        if (invalidIdResult is not null)
+        {
+            return invalidIdResult;
+        }
+
         try
         {
             var project = await projectService.GetById(id, cancellationToken);
@@ -61,6 +68,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProjectDTO>> Update(Guid id, [FromBody] UpdateProjectDTO projectDto, CancellationToken cancellationToken)
     {
+        var invalidIdResult = ValidateProjectId(id);
+
+        if (invalidIdResult is not null)
+        {
+            return invalidIdResult;
+        }
+
         try
         {
             var updatedProject = await projectService.Update(id, projectDto, cancellationToken);
@@ -81,6 +95,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
+        var invalidIdResult = ValidateProjectId(id);
+
+        if (invalidIdResult is not null)
+        {
+            return invalidIdResult;
+        }
+
         try
         {
             var wasDeleted = await projectService.Delete(id, cancellationToken);
@@ -96,5 +117,12 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         {
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
+    }
+
+    private ActionResult? ValidateProjectId(Guid id)
+    {
+        return id == Guid.Empty
+            ? BadRequest("The provided project id is not valid.")
+            : null;
     }
 }

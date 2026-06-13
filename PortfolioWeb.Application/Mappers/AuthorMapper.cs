@@ -1,7 +1,7 @@
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Domain.Entities;
 
-namespace PortfolioWeb.Application;
+namespace PortfolioWeb.Application.Mappers;
 
 public static class AuthorMapper
 {
