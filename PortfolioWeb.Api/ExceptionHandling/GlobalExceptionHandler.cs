@@ -1,13 +1,15 @@
 using System.Net;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Core.Contracts.Exceptions;
 
 namespace PortfolioWeb.Api.ExceptionHandling;
 
-public class GlobalExceptionHandler : IExceptionHandler
+public class GlobalExceptionHandler(
+    ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -15,8 +17,11 @@ public class GlobalExceptionHandler : IExceptionHandler
         CancellationToken cancellationToken)
     {
         var problemDetails = CreateProblemDetails(httpContext, exception);
+        var statusCode = problemDetails.Status ?? (int)HttpStatusCode.InternalServerError;
 
-        httpContext.Response.StatusCode = problemDetails.Status ?? (int)HttpStatusCode.InternalServerError;
+        LogException(httpContext, exception, statusCode, problemDetails.Title ?? "Internal Server Error");
+
+        httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/problem+json";
 
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
@@ -51,5 +56,35 @@ public class GlobalExceptionHandler : IExceptionHandler
             InfrastructurePersistenceException => (StatusCodes.Status500InternalServerError, "Database persistence error"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
+    }
+
+    private void LogException(HttpContext httpContext, Exception exception, int statusCode, string title)
+    {
+        var exceptionType = exception.GetType().Name;
+        var httpMethod = httpContext.Request.Method;
+        var path = httpContext.Request.Path.Value ?? string.Empty;
+        var traceId = httpContext.TraceIdentifier;
+
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            logger.HandledError(
+                exception,
+                statusCode,
+                title,
+                exceptionType,
+                httpMethod,
+                path,
+                traceId);
+
+            return;
+        }
+
+        logger.HandledWarning(
+            statusCode,
+            title,
+            exceptionType,
+            httpMethod,
+            path,
+            traceId);
     }
 }
