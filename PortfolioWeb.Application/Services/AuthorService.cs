@@ -1,25 +1,34 @@
+using Microsoft.Extensions.Logging;
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Services;
+using PortfolioWeb.Application.Logging;
 using PortfolioWeb.Application.Mappers;
 using PortfolioWeb.Core.Contracts.Repositories;
 
 namespace PortfolioWeb.Application.Services;
 
-public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
+public class AuthorService(
+    IAuthorRepository authorRepository,
+    ILogger<AuthorService> logger) : IAuthorService
 {
     public async Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
+            logger.AuthorRetrievalRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
         }
 
         var author = await authorRepository.GetById(id, cancellationToken);
 
-        return author is null
-            ? throw new AuthorNotFoundException(id)
-            : AuthorMapper.MapToDTO(author);
+        if (author is null)
+        {
+            logger.AuthorNotFoundDuringRetrieval(id);
+            throw new AuthorNotFoundException(id);
+        }
+
+        return AuthorMapper.MapToDTO(author);
     }
 
     public async Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default)
@@ -33,8 +42,12 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
 
     public async Task<AuthorDTO> Create(PersistAuthorDTO authorDto, CancellationToken cancellationToken = default)
     {
+        logger.CreatingAuthor(authorDto.Name);
+
         var author = AuthorMapper.MapToEntity(authorDto);
         var createdAuthor = await authorRepository.Create(author, cancellationToken);
+
+        logger.AuthorCreatedSuccessfully(createdAuthor.Id, createdAuthor.Name);
 
         return AuthorMapper.MapToDTO(createdAuthor);
     }
@@ -43,33 +56,50 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
     {
         if (id == Guid.Empty)
         {
+            logger.AuthorUpdateRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
         }
+
+        logger.UpdatingAuthor(id, authorDto.Name);
 
         var author = AuthorMapper.MapToEntity(authorDto);
         author.Id = id;
 
         var updatedAuthor = await authorRepository.Update(author, cancellationToken);
 
-        return updatedAuthor is null
-            ? throw new AuthorNotFoundException(id)
-            : AuthorMapper.MapToDTO(updatedAuthor);
+        if (updatedAuthor is null)
+        {
+            logger.AuthorNotFoundDuringUpdate(id);
+            throw new AuthorNotFoundException(id);
+        }
+
+        logger.AuthorUpdatedSuccessfully(updatedAuthor.Id);
+
+        return AuthorMapper.MapToDTO(updatedAuthor);
     }
 
     public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
+            logger.AuthorDeletionRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
         }
+
+        logger.DeletingAuthor(id);
 
         var author = await authorRepository.GetById(id, cancellationToken);
 
         if (author is null)
         {
+            logger.AuthorNotFoundDuringDeletion(id);
             throw new AuthorNotFoundException(id);
         }
 
-        return await authorRepository.Delete(author, cancellationToken);
+        await authorRepository.Delete(author, cancellationToken);
+
+        logger.AuthorDeletedSuccessfully(id);
+
+        return true;
     }
 }
