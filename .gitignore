@@ -3,8 +3,8 @@
 /PortfolioWeb.Domain/bin
 /PortfolioWeb.Domain/obj
 
-/PortfolioWeb.Domain.Contract/bin
-/PortfolioWeb.Domain.Contract/obj
+/PortfolioWeb.Core.Contracts/bin
+/PortfolioWeb.Core.Contracts/obj
 
 /PortfolioWeb.Infrastructure/bin
 /PortfolioWeb.Infrastructure/obj

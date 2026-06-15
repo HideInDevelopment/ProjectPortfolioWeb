@@ -6,7 +6,7 @@ COPY ["PortfolioWeb.Api/PortfolioWeb.Api.csproj", "PortfolioWeb.Api/"]
 COPY ["PortfolioWeb.Application/PortfolioWeb.Application.csproj", "PortfolioWeb.Application/"]
 COPY ["PortfolioWeb.Application.Contract/PortfolioWeb.Application.Contract.csproj", "PortfolioWeb.Application.Contract/"]
 COPY ["PortfolioWeb.Domain/PortfolioWeb.Domain.csproj", "PortfolioWeb.Domain/"]
-COPY ["PortfolioWeb.Domain.Contract/PortfolioWeb.Domain.Contract.csproj", "PortfolioWeb.Domain.Contract/"]
+COPY ["PortfolioWeb.Core.Contracts/PortfolioWeb.Core.Contracts.csproj", "PortfolioWeb.Core.Contracts/"]
 COPY ["PortfolioWeb.Infrastructure/PortfolioWeb.Infrastructure.csproj", "PortfolioWeb.Infrastructure/"]
 
 RUN dotnet restore "PortfolioWeb.sln"

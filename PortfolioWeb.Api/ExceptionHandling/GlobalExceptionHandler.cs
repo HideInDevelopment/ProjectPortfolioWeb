@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
+using PortfolioWeb.Core.Contracts.Exceptions;
 
 namespace PortfolioWeb.Api.ExceptionHandling;
 
@@ -45,6 +46,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             ReferencedAuthorNotFoundException => (StatusCodes.Status400BadRequest, "Referenced author not found"),
             AuthorNotFoundException => (StatusCodes.Status404NotFound, "Author not found"),
             ProjectNotFoundException => (StatusCodes.Status404NotFound, "Project not found"),
+            InfrastructureConnectionException => (StatusCodes.Status503ServiceUnavailable, "Database unavailable"),
+            InfrastructureQueryException => (StatusCodes.Status500InternalServerError, "Database query error"),
+            InfrastructurePersistenceException => (StatusCodes.Status500InternalServerError, "Database persistence error"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
     }

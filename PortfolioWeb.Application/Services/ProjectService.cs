@@ -3,7 +3,7 @@ using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Mappers;
-using PortfolioWeb.Domain.Contract.Repositories;
+using PortfolioWeb.Core.Contracts.Repositories;
 
 namespace PortfolioWeb.Application.Services;
 
@@ -20,8 +20,8 @@ public class ProjectService(
 
         var project = await projectRepository.GetById(id, cancellationToken);
 
-        return project is null 
-            ? throw new ProjectNotFoundException(id) 
+        return project is null
+            ? throw new ProjectNotFoundException(id)
             : ProjectMapper.MapToDTO(project);
     }
 
@@ -75,8 +75,8 @@ public class ProjectService(
 
         var updatedProject = await projectRepository.Update(project, cancellationToken);
 
-        return updatedProject is null 
-            ? throw new ProjectNotFoundException(id) 
+        return updatedProject is null
+            ? throw new ProjectNotFoundException(id)
             : ProjectMapper.MapToDTO(updatedProject);
     }
 
@@ -94,10 +94,6 @@ public class ProjectService(
             throw new ProjectNotFoundException(id);
         }
 
-        var wasDeleted = await projectRepository.Delete(project, cancellationToken);
-
-        return wasDeleted 
-            ? true
-            : throw new Exception("An unexpected error occurred while deleting the project.");
+        return await projectRepository.Delete(project, cancellationToken);
     }
 }

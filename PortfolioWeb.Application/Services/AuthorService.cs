@@ -2,7 +2,7 @@ using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Mappers;
-using PortfolioWeb.Domain.Contract.Repositories;
+using PortfolioWeb.Core.Contracts.Repositories;
 
 namespace PortfolioWeb.Application.Services;
 
@@ -17,8 +17,8 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
 
         var author = await authorRepository.GetById(id, cancellationToken);
 
-        return author is null 
-            ? throw new AuthorNotFoundException(id) 
+        return author is null
+            ? throw new AuthorNotFoundException(id)
             : AuthorMapper.MapToDTO(author);
     }
 
@@ -51,8 +51,8 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
 
         var updatedAuthor = await authorRepository.Update(author, cancellationToken);
 
-        return updatedAuthor is null 
-            ? throw new AuthorNotFoundException(id) 
+        return updatedAuthor is null
+            ? throw new AuthorNotFoundException(id)
             : AuthorMapper.MapToDTO(updatedAuthor);
     }
 
@@ -70,10 +70,6 @@ public class AuthorService(IAuthorRepository authorRepository) : IAuthorService
             throw new AuthorNotFoundException(id);
         }
 
-        var wasDeleted = await authorRepository.Delete(author, cancellationToken);
-
-        return wasDeleted 
-            ? true 
-            : throw new Exception("An unexpected error occurred while deleting the author.");
+        return await authorRepository.Delete(author, cancellationToken);
     }
 }

@@ -1,6 +1,6 @@
 using PortfolioWeb.Domain.Entities;
 
-namespace PortfolioWeb.Domain.Contract.Repositories;
+namespace PortfolioWeb.Core.Contracts.Repositories;
 
 public interface IProjectRepository
 {

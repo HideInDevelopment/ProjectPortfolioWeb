@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using PortfolioWeb.Domain.Contract.Repositories;
+using PortfolioWeb.Core.Contracts.Exceptions;
+using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
 using PortfolioWeb.Infrastructure.Persistence;
 
@@ -9,41 +10,118 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
 {
     public async Task<Author?> GetById(Guid id, CancellationToken cancellationToken = default)
     {
-        return await dbContext.Authors
-            .Include(author => author.Projects)
-            .FirstOrDefaultAsync(author => author.Id == id, cancellationToken);
+        try
+        {
+            return await dbContext.Authors
+                .Include(author => author.Projects)
+                .FirstOrDefaultAsync(author => author.Id == id, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to retrieve the author.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsQueryException(exception))
+        {
+            throw new InfrastructureQueryException("An error occurred while retrieving the author from the database.", exception);
+        }
     }
 
     public async Task<List<Author>> GetAll(CancellationToken cancellationToken = default)
     {
-        return await dbContext.Authors
-            .Include(author => author.Projects)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await dbContext.Authors
+                .Include(author => author.Projects)
+                .ToListAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to retrieve the authors.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsQueryException(exception))
+        {
+            throw new InfrastructureQueryException("An error occurred while retrieving the authors from the database.", exception);
+        }
     }
 
     public async Task<Author> Create(Author author, CancellationToken cancellationToken = default)
     {
-        await dbContext.Authors.AddAsync(author, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.Authors.AddAsync(author, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
-        return author;
+            return author;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to create the author.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsPersistenceException(exception))
+        {
+            throw new InfrastructurePersistenceException("An error occurred while saving the author in the database.", exception);
+        }
     }
 
     public async Task<Author?> Update(Author author, CancellationToken cancellationToken = default)
     {
-        var existingAuthor = await dbContext.Authors
-            .Include(x => x.Projects)
-            .FirstOrDefaultAsync(x => x.Id == author.Id, cancellationToken);
+        Author? existingAuthor;
+
+        try
+        {
+            existingAuthor = await dbContext.Authors
+                .Include(x => x.Projects)
+                .FirstOrDefaultAsync(x => x.Id == author.Id, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to update the author.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsQueryException(exception))
+        {
+            throw new InfrastructureQueryException("An error occurred while retrieving the author to update it.", exception);
+        }
 
         if (existingAuthor is null)
         {
             return null;
         }
 
-        dbContext.Entry(existingAuthor).CurrentValues.SetValues(author);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            dbContext.Entry(existingAuthor).CurrentValues.SetValues(author);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
-        return existingAuthor;
+            return existingAuthor;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to update the author.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsPersistenceException(exception))
+        {
+            throw new InfrastructurePersistenceException("An error occurred while saving the updated author in the database.", exception);
+        }
     }
 
     public async Task<bool> Delete(Author author, CancellationToken cancellationToken = default)
@@ -55,9 +133,17 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
 
             return true;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
-            return false;
+            throw;
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
+        {
+            throw new InfrastructureConnectionException("An error occurred while connecting to the database to delete the author.", exception);
+        }
+        catch (Exception exception) when (ExceptionClassifier.IsPersistenceException(exception))
+        {
+            throw new InfrastructurePersistenceException("An error occurred while deleting the author from the database.", exception);
         }
     }
 }

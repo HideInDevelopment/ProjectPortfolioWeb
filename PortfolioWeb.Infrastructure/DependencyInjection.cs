@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PortfolioWeb.Domain.Contract.Repositories;
+using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Infrastructure.Persistence;
 using PortfolioWeb.Infrastructure.Repositories;
 

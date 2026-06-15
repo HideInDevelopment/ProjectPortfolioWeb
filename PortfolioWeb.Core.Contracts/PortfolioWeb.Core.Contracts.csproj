@@ -4,10 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>PortfolioWeb.Core.Contracts</AssemblyName>
+    <RootNamespace>PortfolioWeb.Core.Contracts</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PortfolioWeb.Domain\PortfolioWeb.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Npgsql" Version="10.0.0" />
   </ItemGroup>
 
 </Project>

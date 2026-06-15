@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioWeb.Infrastructure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioWeb.Application", "PortfolioWeb.Application\PortfolioWeb.Application.csproj", "{3666E294-FF43-4511-9ABB-45A5DE904BCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioWeb.Domain.Contract", "PortfolioWeb.Domain.Contract\PortfolioWeb.Domain.Contract.csproj", "{E8741F4B-83D8-4958-878E-24B18C17292A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioWeb.Core.Contracts", "PortfolioWeb.Core.Contracts\PortfolioWeb.Core.Contracts.csproj", "{E8741F4B-83D8-4958-878E-24B18C17292A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioWeb.Application.Contract", "PortfolioWeb.Application.Contract\PortfolioWeb.Application.Contract.csproj", "{D350BCCA-F58F-4814-B5DD-1A65E8696AE2}"
 EndProject

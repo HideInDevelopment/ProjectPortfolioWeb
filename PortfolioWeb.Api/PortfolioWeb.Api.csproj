@@ -10,6 +10,7 @@
     <ItemGroup>
         <ProjectReference Include="..\PortfolioWeb.Application.Contract\PortfolioWeb.Application.Contract.csproj" />
         <ProjectReference Include="..\PortfolioWeb.Application\PortfolioWeb.Application.csproj" />
+        <ProjectReference Include="..\PortfolioWeb.Core.Contracts\PortfolioWeb.Core.Contracts.csproj" />
         <ProjectReference Include="..\PortfolioWeb.Infrastructure\PortfolioWeb.Infrastructure.csproj" />
     </ItemGroup>
 
