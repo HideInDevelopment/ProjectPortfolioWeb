@@ -4,9 +4,7 @@ namespace PortfolioWeb.Core.Contracts.Tests.Exceptions;
 
 public class InfrastructureDerivedExceptionsTest
 {
-    [TestCase(typeof(InfrastructureConnectionException))]
-    [TestCase(typeof(InfrastructureQueryException))]
-    [TestCase(typeof(InfrastructurePersistenceException))]
+    [TestCaseSource(nameof(InfrastructureExceptionTypes))]
     public void DerivedInfrastructureExceptions_ShouldInitializeDefaultConstructor(Type exceptionType)
     {
         var exception = (InfrastructureException)Activator.CreateInstance(exceptionType)!;
@@ -19,9 +17,7 @@ public class InfrastructureDerivedExceptionsTest
         });
     }
 
-    [TestCase(typeof(InfrastructureConnectionException))]
-    [TestCase(typeof(InfrastructureQueryException))]
-    [TestCase(typeof(InfrastructurePersistenceException))]
+    [TestCaseSource(nameof(InfrastructureExceptionTypes))]
     public void DerivedInfrastructureExceptions_ShouldInitializeMessageConstructor(Type exceptionType)
     {
         var exception = (InfrastructureException)Activator.CreateInstance(exceptionType, "boom")!;
@@ -34,9 +30,7 @@ public class InfrastructureDerivedExceptionsTest
         });
     }
 
-    [TestCase(typeof(InfrastructureConnectionException))]
-    [TestCase(typeof(InfrastructureQueryException))]
-    [TestCase(typeof(InfrastructurePersistenceException))]
+    [TestCaseSource(nameof(InfrastructureExceptionTypes))]
     public void DerivedInfrastructureExceptions_ShouldInitializeMessageAndInnerExceptionConstructor(Type exceptionType)
     {
         var innerException = new InvalidOperationException("inner");
@@ -48,5 +42,12 @@ public class InfrastructureDerivedExceptionsTest
             Assert.That(exception.Message, Is.EqualTo("boom"));
             Assert.That(exception.InnerException, Is.SameAs(innerException));
         });
+    }
+
+    private static IEnumerable<TestCaseData> InfrastructureExceptionTypes()
+    {
+        yield return new TestCaseData(typeof(InfrastructureConnectionException));
+        yield return new TestCaseData(typeof(InfrastructureQueryException));
+        yield return new TestCaseData(typeof(InfrastructurePersistenceException));
     }
 }
