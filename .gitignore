@@ -5,21 +5,23 @@
 
 /PortfolioWeb.Core.Contracts/bin
 /PortfolioWeb.Core.Contracts/obj
-
 /PortfolioWeb.Core.Contracts.Tests/bin
 /PortfolioWeb.Core.Contracts.Tests/obj
+/PortfolioWeb.Core.Contracts.Tests/TestResults
 
 /PortfolioWeb.Infrastructure/bin
 /PortfolioWeb.Infrastructure/obj
+/PortfolioWeb.Infrastructure.Tests/bin
+/PortfolioWeb.Infrastructure.Tests/obj
+/PortfolioWeb.Infrastructure.Tests/TestResults
 
 /PortfolioWeb.Application/bin
 /PortfolioWeb.Application/obj
-
 /PortfolioWeb.Application.Contract/bin
 /PortfolioWeb.Application.Contract/obj
-
 /PortfolioWeb.Application.Tests/bin
 /PortfolioWeb.Application.Tests/obj
+/PortfolioWeb.Application.Tests/TestResults
 
 /PortfolioWeb.Api/bin
 /PortfolioWeb.Api/obj
