@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -e
+
+REPOSITORY_ROOT="$(git rev-parse --show-toplevel)"
+TEST_SCRIPT="$REPOSITORY_ROOT/scripts/test-all.ps1"
+
+if command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "$TEST_SCRIPT" -NoRestore
+  exit $?
+fi
+
+if command -v powershell >/dev/null 2>&1; then
+  powershell -NoProfile -ExecutionPolicy Bypass -File "$TEST_SCRIPT" -NoRestore
+  exit $?
+fi
+
+echo "PowerShell was not found. Install pwsh or powershell to run the pre-push test hook."
+exit 1
