@@ -19,8 +19,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
     var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
 
@@ -35,3 +36,5 @@ app.MapScalarApiReference("/scalar");
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;

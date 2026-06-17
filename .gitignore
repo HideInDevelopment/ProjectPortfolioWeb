@@ -27,6 +27,9 @@
 /PortfolioWeb.Api/obj
 /PortfolioWeb.Api/appsettings.json
 /PortfolioWeb.Api/appsettings.development.json
+/PortfolioWeb.Api.Tests/bin
+/PortfolioWeb.Api.Tests/obj
+/PortfolioWeb.Api.Tests/TestResults
 
 /PortfolioWeb.sln.DotSettings.user
 

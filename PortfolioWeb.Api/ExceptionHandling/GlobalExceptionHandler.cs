@@ -22,9 +22,13 @@ public class GlobalExceptionHandler(
         LogException(httpContext, exception, statusCode, problemDetails.Title ?? "Internal Server Error");
 
         httpContext.Response.StatusCode = statusCode;
-        httpContext.Response.ContentType = "application/problem+json";
-
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        // TODO: Revisit whether ASP.NET offers a cleaner built-in ProblemDetails writer path that preserves
+        // `application/problem+json` without having to force the content type explicitly here.
+        await httpContext.Response.WriteAsJsonAsync(
+            problemDetails,
+            options: null,
+            contentType: "application/problem+json",
+            cancellationToken: cancellationToken);
 
         return true;
     }
