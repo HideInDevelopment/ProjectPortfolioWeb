@@ -15,9 +15,14 @@
 /PortfolioWeb.Application.Contract/bin
 /PortfolioWeb.Application.Contract/obj
 
+/PortfolioWeb.Application.Tests/bin
+/PortfolioWeb.Application.Tests/obj
+
 /PortfolioWeb.Api/bin
 /PortfolioWeb.Api/obj
 /PortfolioWeb.Api/appsettings.json
 /PortfolioWeb.Api/appsettings.development.json
+
+/PortfolioWeb.sln.DotSettings.user
 
 .docker
