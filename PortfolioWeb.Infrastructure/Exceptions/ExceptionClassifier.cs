@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Data.Common;
 
-namespace PortfolioWeb.Core.Contracts.Exceptions;
+namespace PortfolioWeb.Infrastructure.Exceptions;
 
 public static class ExceptionClassifier
 {

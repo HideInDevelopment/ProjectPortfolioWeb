@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using PortfolioWeb.Core.Contracts.Exceptions;
+using PortfolioWeb.Infrastructure.Exceptions;
 using System.Data.Common;
 
-namespace PortfolioWeb.Core.Contracts.Tests.Exceptions;
+namespace PortfolioWeb.Infrastructure.Tests.Exceptions;
 
 public class ExceptionClassifierTest
 {

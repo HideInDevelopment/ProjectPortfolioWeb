@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
+using PortfolioWeb.Infrastructure.Exceptions;
 using PortfolioWeb.Infrastructure.Persistence;
 
 namespace PortfolioWeb.Infrastructure.Repositories;
