@@ -131,12 +131,11 @@ public class ProjectRepositoryTest
         context.Projects.Add(project);
         await context.SaveChangesAsync();
 
-        var result = await repository.Delete(project);
+        await repository.Delete(project);
         var persistedProject = await context.Projects.FindAsync(project.Id);
 
         Assert.Multiple(() =>
         {
-            Assert.That(result, Is.True);
             Assert.That(persistedProject, Is.Null);
         });
     }

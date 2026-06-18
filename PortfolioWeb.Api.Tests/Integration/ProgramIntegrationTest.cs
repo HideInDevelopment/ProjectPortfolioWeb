@@ -117,7 +117,7 @@ public class ProgramIntegrationTest
         public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<bool> Delete(Guid id, CancellationToken cancellationToken = default) =>
+        public Task Delete(Guid id, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
     }
 

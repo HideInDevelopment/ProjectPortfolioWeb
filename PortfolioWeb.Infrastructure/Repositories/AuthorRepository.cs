@@ -125,14 +125,12 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
         }
     }
 
-    public async Task<bool> Delete(Author author, CancellationToken cancellationToken = default)
+    public async Task Delete(Author author, CancellationToken cancellationToken = default)
     {
         try
         {
             dbContext.Authors.Remove(author);
             await dbContext.SaveChangesAsync(cancellationToken);
-
-            return true;
         }
         catch (OperationCanceledException)
         {

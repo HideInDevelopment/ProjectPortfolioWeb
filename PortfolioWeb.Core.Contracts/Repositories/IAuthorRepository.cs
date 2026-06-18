@@ -12,5 +12,5 @@ public interface IAuthorRepository
 
     Task<Author?> Update(Author author, CancellationToken cancellationToken = default);
 
-    Task<bool> Delete(Author author, CancellationToken cancellationToken = default);
+    Task Delete(Author author, CancellationToken cancellationToken = default);
 }

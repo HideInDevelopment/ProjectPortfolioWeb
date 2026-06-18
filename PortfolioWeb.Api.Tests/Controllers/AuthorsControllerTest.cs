@@ -111,7 +111,7 @@ public class AuthorsControllerTest
 
         authorService
             .Setup(service => service.Delete(authorId, cancellationToken))
-            .ReturnsAsync(true);
+            .Returns(Task.CompletedTask);
 
         var controller = new AuthorsController(authorService.Object);
 

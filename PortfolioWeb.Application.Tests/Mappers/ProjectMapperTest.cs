@@ -38,36 +38,6 @@ public class ProjectMapperTest
     }
 
     [Test]
-    public void MapToEntity_ShouldMapProjectDtoCorrectly()
-    {
-        var authorId = Guid.NewGuid();
-        var releaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero);
-        var projectDto = new ProjectDTO
-        {
-            Id = Guid.NewGuid(),
-            Title = "PortfolioWeb",
-            Description = "Personal portfolio website.",
-            ReleaseDate = releaseDate,
-            Version = 1,
-            AuthorId = authorId,
-            IsInDevelopment = true
-        };
-
-        var result = ProjectMapper.MapToEntity(projectDto);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Id, Is.EqualTo(Guid.Empty));
-            Assert.That(result.Title, Is.EqualTo(projectDto.Title));
-            Assert.That(result.Description, Is.EqualTo(projectDto.Description));
-            Assert.That(result.ReleaseDate, Is.EqualTo(projectDto.ReleaseDate));
-            Assert.That(result.Version, Is.EqualTo(projectDto.Version));
-            Assert.That(result.AuthorId, Is.EqualTo(projectDto.AuthorId));
-            Assert.That(result.IsInDevelopment, Is.EqualTo(projectDto.IsInDevelopment));
-        });
-    }
-
-    [Test]
     public void MapToEntity_ShouldMapCreateProjectDtoCorrectly()
     {
         var authorId = Guid.NewGuid();

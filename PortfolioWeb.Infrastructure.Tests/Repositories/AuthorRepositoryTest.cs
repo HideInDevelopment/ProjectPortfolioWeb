@@ -139,13 +139,12 @@ public class AuthorRepositoryTest
         context.Authors.Add(author);
         await context.SaveChangesAsync();
 
-        var result = await repository.Delete(author);
+        await repository.Delete(author);
         var persistedAuthor = await context.Authors.FindAsync(authorId);
         var projects = await context.Projects.ToListAsync();
 
         Assert.Multiple(() =>
         {
-            Assert.That(result, Is.True);
             Assert.That(persistedAuthor, Is.Null);
             Assert.That(projects, Is.Empty);
         });

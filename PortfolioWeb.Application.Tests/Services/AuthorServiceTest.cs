@@ -224,7 +224,7 @@ public class AuthorServiceTest
     }
 
     [Test]
-    public async Task Delete_ShouldReturnTrue_WhenAuthorIsDeletedSuccessfully()
+    public async Task Delete_ShouldDeleteAuthorSuccessfully()
     {
         var authorId = Guid.NewGuid();
         var author = CreateAuthor(authorId, "Manuel");
@@ -235,11 +235,10 @@ public class AuthorServiceTest
 
         _authorRepositoryMock
             .Setup(x => x.Delete(author, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Returns(Task.CompletedTask);
 
-        var result = await _authorService.Delete(authorId);
+        await _authorService.Delete(authorId);
 
-        Assert.That(result, Is.True);
         _authorRepositoryMock.Verify(
             x => x.Delete(author, It.IsAny<CancellationToken>()),
             Times.Once);

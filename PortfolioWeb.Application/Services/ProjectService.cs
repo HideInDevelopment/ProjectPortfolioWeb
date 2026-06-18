@@ -105,7 +105,7 @@ public class ProjectService(
         return ProjectMapper.MapToDTO(updatedProject);
     }
 
-    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -126,7 +126,5 @@ public class ProjectService(
         await projectRepository.Delete(project, cancellationToken);
 
         logger.ProjectDeletedSuccessfully(id);
-
-        return true;
     }
 }

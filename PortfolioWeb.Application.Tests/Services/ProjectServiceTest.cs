@@ -415,7 +415,7 @@ public class ProjectServiceTest
     }
 
     [Test]
-    public async Task Delete_ShouldReturnTrue_WhenProjectIsDeletedSuccessfully()
+    public async Task Delete_ShouldDeleteProjectSuccessfully()
     {
         var projectId = Guid.NewGuid();
         var project = CreateProject(
@@ -433,11 +433,10 @@ public class ProjectServiceTest
 
         _projectRepositoryMock
             .Setup(x => x.Delete(project, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Returns(Task.CompletedTask);
 
-        var result = await _projectService.Delete(projectId);
+        await _projectService.Delete(projectId);
 
-        Assert.That(result, Is.True);
         _projectRepositoryMock.Verify(
             x => x.Delete(project, It.IsAny<CancellationToken>()),
             Times.Once);

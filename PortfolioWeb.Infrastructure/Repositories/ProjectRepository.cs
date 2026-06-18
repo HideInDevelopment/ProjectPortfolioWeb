@@ -121,14 +121,12 @@ public class ProjectRepository(PortfolioWebDbContext dbContext) : IProjectReposi
         }
     }
 
-    public async Task<bool> Delete(Project project, CancellationToken cancellationToken = default)
+    public async Task Delete(Project project, CancellationToken cancellationToken = default)
     {
         try
         {
             dbContext.Projects.Remove(project);
             await dbContext.SaveChangesAsync(cancellationToken);
-
-            return true;
         }
         catch (OperationCanceledException)
         {

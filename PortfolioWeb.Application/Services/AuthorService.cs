@@ -78,7 +78,7 @@ public class AuthorService(
         return AuthorMapper.MapToDTO(updatedAuthor);
     }
 
-    public async Task<bool> Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -99,7 +99,5 @@ public class AuthorService(
         await authorRepository.Delete(author, cancellationToken);
 
         logger.AuthorDeletedSuccessfully(id);
-
-        return true;
     }
 }

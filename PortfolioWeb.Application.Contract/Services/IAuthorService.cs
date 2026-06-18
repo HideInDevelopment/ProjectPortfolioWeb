@@ -12,5 +12,5 @@ public interface IAuthorService
 
     Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default);
 
-    Task<bool> Delete(Guid id, CancellationToken cancellationToken = default);
+    Task Delete(Guid id, CancellationToken cancellationToken = default);
 }

@@ -12,5 +12,5 @@ public interface IProjectRepository
 
     Task<Project?> Update(Project project, CancellationToken cancellationToken = default);
 
-    Task<bool> Delete(Project project, CancellationToken cancellationToken = default);
+    Task Delete(Project project, CancellationToken cancellationToken = default);
 }

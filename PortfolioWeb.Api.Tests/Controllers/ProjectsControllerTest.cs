@@ -125,7 +125,7 @@ public class ProjectsControllerTest
 
         projectService
             .Setup(service => service.Delete(projectId, cancellationToken))
-            .ReturnsAsync(true);
+            .Returns(Task.CompletedTask);
 
         var controller = new ProjectsController(projectService.Object);
 

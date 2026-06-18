@@ -12,5 +12,5 @@ public interface IProjectService
 
     Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, CancellationToken cancellationToken = default);
 
-    Task<bool> Delete(Guid id, CancellationToken cancellationToken = default);
+    Task Delete(Guid id, CancellationToken cancellationToken = default);
 }
