@@ -66,6 +66,9 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 ## Tests
 - Test framework is **NUnit**, not xUnit.
 - Shared test runner script: [scripts/test-all.ps1](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/scripts/test-all.ps1)
+- Any iteration that introduces code or changes existing code must be covered by tests.
+- After adding or updating those tests, run the skill [skills/post-iteration-validation/SKILL.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/skills/post-iteration-validation/SKILL.md) to validate the appropriate scope.
+- Coverage runs must use [coverage.runsettings](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/coverage.runsettings) so the exclusion policy is stable and explicit.
 - Test order in that script:
   1. `PortfolioWeb.Application.Tests`
   2. `PortfolioWeb.Core.Contracts.Tests`
@@ -95,4 +98,5 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Read the touched slice end to end before editing: controller -> service -> repository -> tests.
 - If you change a contract in `*.Contract` or `Core.Contracts`, expect fallout in tests and in the corresponding implementation project.
 - Prefer updating existing tests over adding new layers of helpers.
+- Do not close a code iteration without test coverage for the introduced behavior and a test run aligned with that scope.
 - Keep changes small. This repo currently favors straightforward code over reusable abstractions.
