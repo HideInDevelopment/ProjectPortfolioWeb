@@ -68,6 +68,7 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Shared test runner script: [scripts/test-all.ps1](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/scripts/test-all.ps1)
 - Any iteration that introduces code or changes existing code must be covered by tests.
 - After adding or updating those tests, run the skill [skills/post-iteration-validation/SKILL.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/skills/post-iteration-validation/SKILL.md) to validate the appropriate scope.
+- After the normal validation pass is green, run [skills/destructive-test-review/SKILL.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/skills/destructive-test-review/SKILL.md) to review the tests with an adversarial mindset and detect false positives, happy-path bias, weak assertions, or missing branches.
 - Coverage runs must use [coverage.runsettings](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/coverage.runsettings) so the exclusion policy is stable and explicit.
 - Test order in that script:
   1. `PortfolioWeb.Application.Tests`
@@ -98,5 +99,5 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Read the touched slice end to end before editing: controller -> service -> repository -> tests.
 - If you change a contract in `*.Contract` or `Core.Contracts`, expect fallout in tests and in the corresponding implementation project.
 - Prefer updating existing tests over adding new layers of helpers.
-- Do not close a code iteration without test coverage for the introduced behavior and a test run aligned with that scope.
+- Do not close a code iteration without test coverage for the introduced behavior, a normal validation run aligned with that scope, and a destructive review of the resulting tests.
 - Keep changes small. This repo currently favors straightforward code over reusable abstractions.

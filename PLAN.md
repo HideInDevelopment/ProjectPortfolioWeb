@@ -50,7 +50,9 @@ Construir un backend solido para PortfolioWeb que pueda:
   - algunos limites de longitud siguen descansando en EF / base de datos en vez de validarse antes
 - [~] Testing
   - la base esta montada y es util
-  - falta completar cobertura de escenarios no felices y mas integracion real contra infraestructura
+  - ya hay escenarios no felices relevantes en `Api` e `Infrastructure`
+  - ya hay integracion real contra PostgreSQL en `Infrastructure`
+  - falta decidir hasta donde compensa empujar mas cobertura en plumbing y glue code
 
 ## Pendiente para considerar el MVP como cerrado
 
@@ -64,9 +66,9 @@ Construir un backend solido para PortfolioWeb que pueda:
 - [ ] Revisar contratos de request/response para que el frontend tenga una superficie estable
 
 ### 2. Test automaticos con foco en fiabilidad
-- [ ] Completar tests de escenarios negativos en `Infrastructure`
-- [ ] Anadir tests de integracion con PostgreSQL real para los puntos criticos de persistencia
-- [ ] Cubrir mejor validaciones y errores HTTP visibles desde controladores / handler global
+- [x] Completar tests de escenarios negativos asumibles en `Infrastructure`
+- [x] Anadir tests de integracion con PostgreSQL real para los puntos criticos de persistencia
+- [x] Cubrir mejor validaciones y errores HTTP visibles desde controladores / handler global
 - [ ] Dejar claro que parte del sistema queda protegida por unit tests y que parte por integration tests
 
 ### 3. Seguridad base
@@ -78,6 +80,17 @@ Construir un backend solido para PortfolioWeb que pueda:
 
 ### 4. Slice tecnica: User + Authentication + Authorization
 Este punto pasa a ser requisito de cierre del MVP.
+
+#### Orden de implementacion recomendado
+1. Dominio
+2. Persistencia EF + migracion
+3. Contratos y DTOs
+4. Repositorios
+5. Application services
+6. JWT + password hashing
+7. Endpoints de auth
+8. Autorizacion sobre `Author` y `Project`
+9. Tests
 
 #### Objetivo funcional
 - [ ] Un usuario puede registrarse y hacer login con credenciales locales
@@ -107,6 +120,14 @@ Este punto pasa a ser requisito de cierre del MVP.
 - [ ] Mantener `Author` centrado en portfolio y proyectos
 - [ ] Mantener `User` centrado en acceso, identidad y permisos
 
+#### Fase 1. Dominio
+- [ ] Crear `PortfolioWeb.Domain/Entities/User.cs`
+- [ ] Definir navegacion `User -> Author`
+- [ ] Definir navegacion `Author -> User`
+- [ ] Mantener constructores simples y orientados al flujo real
+- [ ] Decidir si `Role` es `string` o `enum`
+  - recomendacion actual: `string` con valor inicial `User` para evitar sobreingenieria
+
 #### Persistencia
 - [ ] Crear configuracion EF Core para `User`
 - [ ] Configurar indices unicos para:
@@ -115,6 +136,17 @@ Este punto pasa a ser requisito de cierre del MVP.
 - [ ] Configurar la relacion `User 1:1 Author`
 - [ ] Configurar delete cascade completo
 - [ ] Generar nueva migracion de esquema tras recrear la base
+
+#### Fase 2. Persistencia EF + migracion
+- [ ] Anadir `DbSet<User>` a `PortfolioWebDbContext`
+- [ ] Crear `UserEntityTypeConfiguration`
+- [ ] Configurar tabla `users`
+- [ ] Configurar `Email` unico
+- [ ] Configurar `AuthorId` unico
+- [ ] Configurar FK `User -> Author`
+- [ ] Configurar cascade delete
+- [ ] Borrar base actual y generar nueva migracion limpia
+- [ ] Verificar que Docker + auto-migration siguen funcionando
 
 #### DTOs pragmaticos
 Evitar repetir el problema que ya hubo con `Author` y `Project`.
@@ -138,6 +170,12 @@ Evitar repetir el problema que ya hubo con `Author` y `Project`.
 - [ ] No crear `UserDTO` general si no hay un caso de uso real que lo necesite
 - [ ] No crear endpoint `Me` por ahora, porque todavia no hay necesidad funcional clara
 
+#### Fase 3. Contratos y DTOs
+- [ ] Crear DTOs de auth en `Application.Contract/DTOs`
+- [ ] Crear contratos de service de auth en `Application.Contract/Services`
+- [ ] Crear excepciones de auth en `Application.Contract/Exceptions`
+- [ ] Mantenerlos separados de `AuthorDTO` y `ProjectDTO`
+
 #### Application layer
 - [ ] Crear service de autenticacion / usuarios con estos casos de uso minimos:
   - `Register`
@@ -157,11 +195,38 @@ Evitar repetir el problema que ya hubo con `Author` y `Project`.
   - verificar password
   - devolver JWT
 
+#### Fase 4. Repositorios
+- [ ] Crear `IUserRepository` en `Core.Contracts`
+- [ ] Implementar `UserRepository` en `Infrastructure`
+- [ ] Exponer solo lo necesario:
+  - `GetByEmail`
+  - `Create`
+- [ ] Decidir si el alta conjunta `User + Author` vive:
+  - en un service con transaccion
+  - o en un repositorio coordinador minimo
+  - recomendacion actual: service coordinando dos repositorios con un unico `DbContext`
+
+#### Fase 5. Application services
+- [ ] Crear `AuthService`
+- [ ] Implementar `Register`
+- [ ] Implementar `Login`
+- [ ] Mapear entrada -> dominio sin introducir mappers innecesarios si la asignacion es trivial
+
 #### Infraestructura tecnica minima
 - [ ] Elegir una implementacion simple y conocida para hash de password
 - [ ] Elegir una implementacion simple para generar JWT
 - [ ] No introducir capas nuevas "por si acaso"
 - [ ] Reutilizar el estilo actual de services, repositories y excepciones
+
+#### Fase 6. JWT + password hashing
+- [ ] Introducir hashing de password
+- [ ] Introducir generacion de JWT
+- [ ] Definir configuracion minima necesaria:
+  - issuer
+  - audience
+  - signing key
+  - expiration
+- [ ] Mantener la configuracion fuera del codigo duro
 
 #### Repositorios
 - [ ] Exponer solo lo minimo necesario para la slice:
@@ -178,6 +243,25 @@ Evitar repetir el problema que ya hubo con `Author` y `Project`.
 - [ ] Mantener `AuthorsController` y `ProjectsController` separados de auth
 - [ ] Anadir autorizacion sobre endpoints de modificacion de `Author` y `Project`
 - [ ] Definir como se obtiene el `UserId` o `AuthorId` desde claims JWT
+
+#### Fase 7. Endpoints de auth
+- [ ] Crear `AuthController`
+- [ ] Implementar `Register`
+- [ ] Implementar `Login`
+- [ ] Devolver `AuthResponseDTO`
+
+#### Fase 8. Autorizacion sobre Author y Project
+- [ ] Anadir autenticacion JWT en `Program.cs`
+- [ ] Proteger endpoints de modificacion de `Author`
+- [ ] Proteger endpoints de modificacion de `Project`
+- [ ] Resolver regla de ownership:
+  - un usuario solo modifica su `Author`
+  - un usuario solo modifica `Projects` de su `Author`
+- [ ] Decidir si esa comprobacion vive en:
+  - controller
+  - service
+  - o helper de autorizacion
+  - recomendacion actual: service, para no duplicar logica
 
 #### Excepciones y respuestas
 - [ ] Definir excepciones de aplicacion especificas solo si aportan valor claro:
@@ -196,6 +280,12 @@ Evitar repetir el problema que ya hubo con `Author` y `Project`.
   - usuario inactivo
 - [ ] Tests de API para register y login
 - [ ] Tests de autorizacion para evitar editar authors/projects ajenos
+
+#### Fase 9. Tests
+- [ ] Unit tests de `AuthService`
+- [ ] Tests de API para `AuthController`
+- [ ] Tests de autorizacion/ownership
+- [ ] Tests de persistencia de `User` contra PostgreSQL si la slice toca relaciones delicadas
 
 #### Riesgos y decisiones conscientes
 - [ ] No introducir refresh tokens en esta fase
