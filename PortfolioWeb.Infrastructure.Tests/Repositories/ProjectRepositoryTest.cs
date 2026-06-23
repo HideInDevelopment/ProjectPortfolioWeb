@@ -8,6 +8,19 @@ namespace PortfolioWeb.Infrastructure.Tests.Repositories;
 public class ProjectRepositoryTest
 {
     [Test]
+    public void GetById_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new ProjectRepository(context);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.GetById(Guid.NewGuid(), cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+    }
+
+    [Test]
     public async Task GetById_ShouldReturnProject_WhenProjectExists()
     {
         await using var context = InMemoryDbContextFactory.Create();
@@ -38,6 +51,19 @@ public class ProjectRepositoryTest
         var result = await repository.GetById(Guid.NewGuid());
 
         Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetAll_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new ProjectRepository(context);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.GetAll(cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -80,6 +106,20 @@ public class ProjectRepositoryTest
     }
 
     [Test]
+    public void Create_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new ProjectRepository(context);
+        var project = CreateProject(Guid.NewGuid(), Guid.NewGuid(), "PortfolioWeb", 1, true);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Create(project, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+    }
+
+    [Test]
     public async Task Update_ShouldPersistUpdatedValues_WhenProjectExists()
     {
         await using var context = InMemoryDbContextFactory.Create();
@@ -107,6 +147,20 @@ public class ProjectRepositoryTest
             Assert.That(persistedProject.IsInDevelopment, Is.False);
             Assert.That(persistedProject.AuthorId, Is.EqualTo(authorId));
         });
+    }
+
+    [Test]
+    public void Update_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new ProjectRepository(context);
+        var project = CreateProject(Guid.NewGuid(), Guid.NewGuid(), "Updated", 2, false);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Update(project, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -138,6 +192,24 @@ public class ProjectRepositoryTest
         {
             Assert.That(persistedProject, Is.Null);
         });
+    }
+
+    [Test]
+    public async Task Delete_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        await using var context = InMemoryDbContextFactory.Create();
+        var repository = new ProjectRepository(context);
+        var project = CreateProject(Guid.NewGuid(), Guid.NewGuid(), "PortfolioWeb", 1, true);
+
+        context.Projects.Add(project);
+        await context.SaveChangesAsync();
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Delete(project, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     private static Project CreateProject(Guid projectId, Guid authorId, string title, int version, bool isInDevelopment)

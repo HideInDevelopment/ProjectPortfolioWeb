@@ -9,7 +9,7 @@ COPY ["PortfolioWeb.Domain/PortfolioWeb.Domain.csproj", "PortfolioWeb.Domain/"]
 COPY ["PortfolioWeb.Core.Contracts/PortfolioWeb.Core.Contracts.csproj", "PortfolioWeb.Core.Contracts/"]
 COPY ["PortfolioWeb.Infrastructure/PortfolioWeb.Infrastructure.csproj", "PortfolioWeb.Infrastructure/"]
 
-RUN dotnet restore "PortfolioWeb.sln"
+RUN dotnet restore "PortfolioWeb.Api/PortfolioWeb.Api.csproj"
 
 COPY . .
 

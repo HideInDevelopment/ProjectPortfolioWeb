@@ -9,6 +9,7 @@ using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
+using PortfolioWeb.Core.Contracts.Exceptions;
 
 namespace PortfolioWeb.Api.Tests.Integration;
 
@@ -71,6 +72,48 @@ public class ProgramIntegrationTest
         });
     }
 
+    [TestCaseSource(nameof(AuthorExceptionMappings))]
+    public async Task ExceptionHandler_ShouldReturnExpectedProblemDetails_ForAuthorExceptions(
+        Exception exception,
+        HttpStatusCode expectedStatusCode,
+        string expectedTitle)
+    {
+        using var client = CreateClientWithAuthorService(new ThrowingAuthorService(exception));
+
+        var response = await client.GetAsync($"/api/Authors/{Guid.NewGuid()}");
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo(expectedTitle));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)expectedStatusCode));
+        });
+    }
+
+    [TestCaseSource(nameof(ProjectExceptionMappings))]
+    public async Task ExceptionHandler_ShouldReturnExpectedProblemDetails_ForProjectExceptions(
+        Exception exception,
+        HttpStatusCode expectedStatusCode,
+        string expectedTitle)
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(exception));
+
+        var response = await client.GetAsync($"/api/Projects/{Guid.NewGuid()}");
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo(expectedTitle));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)expectedStatusCode));
+        });
+    }
+
     [Test]
     public async Task ExceptionHandler_ShouldReturnInternalServerError_WhenControllerThrowsUnhandledException()
     {
@@ -93,7 +136,8 @@ public class ProgramIntegrationTest
     [Test]
     public async Task CreateProject_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
     {
-        using var client = CreateClientWithProjectService(new ThrowingProjectService());
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
         var payload = new
         {
             Title = new string('A', 201),
@@ -118,7 +162,8 @@ public class ProgramIntegrationTest
     [Test]
     public async Task UpdateProject_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
     {
-        using var client = CreateClientWithProjectService(new ThrowingProjectService());
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
         var payload = new
         {
             Title = string.Empty,
@@ -196,19 +241,19 @@ public class ProgramIntegrationTest
             throw new NotImplementedException();
     }
 
-    private sealed class ThrowingProjectService : IProjectService
+    private sealed class ThrowingProjectService(Exception exception) : IProjectService
     {
         public Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
-            throw new ProjectNotFoundException(id);
+            throw exception;
 
         public Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
         public Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default) =>
-            throw new Exception("Project service should not be reached for invalid payloads.");
+            throw exception;
 
         public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, CancellationToken cancellationToken = default) =>
-            throw new Exception("Project service should not be reached for invalid payloads.");
+            throw exception;
 
         public Task Delete(Guid id, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
@@ -219,5 +264,45 @@ public class ProgramIntegrationTest
         public int? Status { get; set; }
 
         public string Title { get; set; } = string.Empty;
+    }
+
+    private static IEnumerable<TestCaseData> AuthorExceptionMappings()
+    {
+        yield return new TestCaseData(
+            new InvalidAuthorIdException(),
+            HttpStatusCode.BadRequest,
+            "Invalid author id");
+        yield return new TestCaseData(
+            new AuthorNotFoundException(Guid.NewGuid()),
+            HttpStatusCode.NotFound,
+            "Author not found");
+        yield return new TestCaseData(
+            new InfrastructureConnectionException("db unavailable"),
+            HttpStatusCode.ServiceUnavailable,
+            "Database unavailable");
+        yield return new TestCaseData(
+            new InfrastructureQueryException("query error"),
+            HttpStatusCode.InternalServerError,
+            "Database query error");
+        yield return new TestCaseData(
+            new InfrastructurePersistenceException("persistence error"),
+            HttpStatusCode.InternalServerError,
+            "Database persistence error");
+    }
+
+    private static IEnumerable<TestCaseData> ProjectExceptionMappings()
+    {
+        yield return new TestCaseData(
+            new InvalidProjectIdException(),
+            HttpStatusCode.BadRequest,
+            "Invalid project id");
+        yield return new TestCaseData(
+            new ProjectNotFoundException(Guid.NewGuid()),
+            HttpStatusCode.NotFound,
+            "Project not found");
+        yield return new TestCaseData(
+            new ReferencedAuthorNotFoundException(Guid.NewGuid()),
+            HttpStatusCode.BadRequest,
+            "Referenced author not found");
     }
 }

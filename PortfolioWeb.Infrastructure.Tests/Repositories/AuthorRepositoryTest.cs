@@ -8,6 +8,19 @@ namespace PortfolioWeb.Infrastructure.Tests.Repositories;
 public class AuthorRepositoryTest
 {
     [Test]
+    public void GetById_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new AuthorRepository(context);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.GetById(Guid.NewGuid(), cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+    }
+
+    [Test]
     public async Task GetById_ShouldReturnAuthorWithProjects_WhenAuthorExists()
     {
         await using var context = InMemoryDbContextFactory.Create();
@@ -40,6 +53,19 @@ public class AuthorRepositoryTest
         var result = await repository.GetById(Guid.NewGuid());
 
         Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetAll_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new AuthorRepository(context);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.GetAll(cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -84,6 +110,20 @@ public class AuthorRepositoryTest
     }
 
     [Test]
+    public void Create_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new AuthorRepository(context);
+        var author = CreateAuthor(Guid.NewGuid(), "Manuel");
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Create(author, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+    }
+
+    [Test]
     public async Task Update_ShouldPersistUpdatedValues_WhenAuthorExists()
     {
         await using var context = InMemoryDbContextFactory.Create();
@@ -111,6 +151,23 @@ public class AuthorRepositoryTest
             Assert.That(persistedAuthor.Projects, Has.Count.EqualTo(1));
             Assert.That(persistedAuthor.Projects[0].Title, Is.EqualTo("Existing Project"));
         });
+    }
+
+    [Test]
+    public void Update_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        using var context = InMemoryDbContextFactory.Create();
+        var repository = new AuthorRepository(context);
+        var author = new Author("Updated Name")
+        {
+            Id = Guid.NewGuid()
+        };
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Update(author, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -148,6 +205,24 @@ public class AuthorRepositoryTest
             Assert.That(persistedAuthor, Is.Null);
             Assert.That(projects, Is.Empty);
         });
+    }
+
+    [Test]
+    public async Task Delete_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
+    {
+        await using var context = InMemoryDbContextFactory.Create();
+        var repository = new AuthorRepository(context);
+        var author = CreateAuthor(Guid.NewGuid(), "Manuel");
+
+        context.Authors.Add(author);
+        await context.SaveChangesAsync();
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Assert.That(
+            async () => await repository.Delete(author, cancellationTokenSource.Token),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     private static Author CreateAuthor(Guid authorId, string name, params Project[] projects)
