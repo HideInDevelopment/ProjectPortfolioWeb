@@ -15,6 +15,8 @@ using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Core.Contracts.Exceptions;
+using PortfolioWeb.Core.Contracts.Repositories;
+using PortfolioWeb.Domain.Entities;
 
 namespace PortfolioWeb.Api.Tests.Integration;
 
@@ -135,6 +137,271 @@ public class ProgramIntegrationTest
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Internal Server Error"));
             Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.InternalServerError));
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnJwtAcceptedByProtectedAuthorEndpoint()
+    {
+        var userRepository = new InMemoryUserRepository();
+        using var client = CreateClientWithUserRepositoryAndAuthorService(
+            userRepository,
+            new OwnershipProbeAuthorService());
+
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var updateResponse = await client.PutAsync(
+            $"/api/Authors/{userRepository.CreatedUser!.Author.Id}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(author, Is.Not.Null);
+            Assert.That(author!.Id, Is.EqualTo(userRepository.CreatedUser.Author.Id));
+            Assert.That(author.Name, Is.EqualTo("Updated Manuel"));
+        });
+    }
+
+    [Test]
+    public async Task Login_ShouldUseHashCreatedDuringRegisterAndReturnJwtAcceptedByProtectedAuthorEndpoint()
+    {
+        var userRepository = new InMemoryUserRepository();
+        using var client = CreateClientWithUserRepositoryAndAuthorService(
+            userRepository,
+            new OwnershipProbeAuthorService());
+
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var loginResponse = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password"
+            }));
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var updateResponse = await client.PutAsync(
+            $"/api/Authors/{userRepository.CreatedUser!.Author.Id}",
+            CreateJsonContent(new
+            {
+                Name = "Updated After Login"
+            }));
+        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(author, Is.Not.Null);
+            Assert.That(author!.Id, Is.EqualTo(userRepository.CreatedUser.Author.Id));
+            Assert.That(author.Name, Is.EqualTo("Updated After Login"));
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnConflict_WhenCreateFailsBecauseEmailWasInsertedConcurrently()
+    {
+        using var client = CreateClientWithUserRepository(
+            new RaceDuplicateUserRepository("manuel@portfolio.local", "Manuel"));
+
+        using var response = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Duplicate email"));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Conflict));
+        });
+    }
+
+    [Test]
+    public async Task AuthenticatedAuthorUpdate_ShouldReturnForbidden_WhenOwnershipCheckFails()
+    {
+        var userRepository = new InMemoryUserRepository();
+        using var client = CreateClientWithUserRepositoryAndAuthorService(
+            userRepository,
+            new OwnershipProbeAuthorService());
+
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var updateResponse = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+        var problemDetails = await updateResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(updateResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Forbidden resource access"));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
+    }
+
+    [Test]
+    public async Task AuthenticatedProjectCreate_ShouldReturnForbidden_WhenOwnershipCheckFails()
+    {
+        using var client = CreateClientWithUserRepositoryAndProjectService(
+            new InMemoryUserRepository(),
+            new OwnershipProbeProjectService());
+
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var createResponse = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(new
+            {
+                Title = "PortfolioWeb",
+                Description = "Personal portfolio website.",
+                ReleaseDate = "2026-07-01T00:00:00+00:00",
+                Version = 1,
+                AuthorId = Guid.NewGuid(),
+                IsInDevelopment = true
+            }));
+        var problemDetails = await createResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(createResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Forbidden resource access"));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
+    }
+
+    [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtDoesNotContainAuthorId()
+    {
+        var userRepository = new InMemoryUserRepository();
+        userRepository.AddUser(CreatePersistedUser("manuel@portfolio.local", "Manuel", true));
+
+        using var client = CreateClientWithUserRepositoryAndAuthorService(
+            userRepository,
+            new OwnershipProbeAuthorService());
+        AuthenticateClient(client, CreateAccessTokenWithoutAuthorId("manuel@portfolio.local"));
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnForbidden_WhenUserIsDeactivatedAfterTokenIssuance()
+    {
+        var userRepository = new InMemoryUserRepository();
+        using var client = CreateClientWithUserRepositoryAndAuthorService(
+            userRepository,
+            new OwnershipProbeAuthorService());
+
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        userRepository.CreatedUser!.IsActive = false;
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{userRepository.CreatedUser.Author.Id}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Inactive user"));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Forbidden));
         });
     }
 
@@ -383,6 +650,58 @@ public class ProgramIntegrationTest
             });
     }
 
+    private HttpClient CreateClientWithUserRepository(IUserRepository userRepository)
+    {
+        return factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IUserRepository>();
+                    services.AddSingleton(userRepository);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = true
+            });
+    }
+
+    private HttpClient CreateClientWithUserRepositoryAndAuthorService(IUserRepository userRepository, IAuthorService authorService)
+    {
+        return factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IUserRepository>();
+                    services.AddSingleton(userRepository);
+                    services.RemoveAll<IAuthorService>();
+                    services.AddSingleton(authorService);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = true
+            });
+    }
+
+    private HttpClient CreateClientWithUserRepositoryAndProjectService(IUserRepository userRepository, IProjectService projectService)
+    {
+        return factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IUserRepository>();
+                    services.AddSingleton(userRepository);
+                    services.RemoveAll<IProjectService>();
+                    services.AddSingleton(projectService);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = true
+            });
+    }
+
     private static StringContent CreateJsonContent<T>(T payload)
     {
         return new StringContent(
@@ -398,6 +717,11 @@ public class ProgramIntegrationTest
             CreateAccessToken(authorId));
     }
 
+    private static void AuthenticateClient(HttpClient client, string accessToken)
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    }
+
     private static string CreateAccessToken(Guid authorId)
     {
         var claims = new List<Claim>
@@ -405,6 +729,30 @@ public class ProgramIntegrationTest
             new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Email, "manuel@portfolio.local"),
             new("authorId", authorId.ToString()),
+            new(ClaimTypes.Role, "User")
+        };
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ThisIsATestSigningKeyWithEnoughLength123!")),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: "PortfolioWeb",
+            audience: "PortfolioWebClient",
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(60),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string CreateAccessTokenWithoutAuthorId(string email)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Email, email),
             new(ClaimTypes.Role, "User")
         };
 
@@ -463,6 +811,131 @@ public class ProgramIntegrationTest
 
         public Task<AuthResponseDTO> Login(LoginUserDTO loginUserDto, CancellationToken cancellationToken = default) =>
             throw exception;
+
+        public Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default) =>
+            throw exception;
+    }
+
+    private sealed class InMemoryUserRepository : IUserRepository
+    {
+        private readonly Dictionary<string, User> _usersByEmail = new(StringComparer.Ordinal);
+
+        public User? CreatedUser { get; private set; }
+
+        public Task<User?> GetByEmail(string email, CancellationToken cancellationToken = default)
+        {
+            _usersByEmail.TryGetValue(email, out var user);
+
+            return Task.FromResult(user);
+        }
+
+        public Task<User> Create(User user, CancellationToken cancellationToken = default)
+        {
+            if (user.Id == Guid.Empty)
+            {
+                user.Id = Guid.NewGuid();
+            }
+
+            if (user.Author.Id == Guid.Empty)
+            {
+                user.Author.Id = Guid.NewGuid();
+            }
+
+            user.Author.UserId = user.Id;
+            user.Author.User = user;
+
+            _usersByEmail[user.Email] = user;
+            CreatedUser = user;
+
+            return Task.FromResult(user);
+        }
+
+        public void AddUser(User user)
+        {
+            _usersByEmail[user.Email] = user;
+            CreatedUser = user;
+        }
+    }
+
+    private sealed class RaceDuplicateUserRepository(string email, string authorName) : IUserRepository
+    {
+        private readonly User conflictingUser = CreatePersistedUser(email, authorName);
+        private int getByEmailCallCount;
+
+        public Task<User?> GetByEmail(string requestedEmail, CancellationToken cancellationToken = default)
+        {
+            getByEmailCallCount++;
+
+            if (getByEmailCallCount == 1)
+            {
+                return Task.FromResult<User?>(null);
+            }
+
+            return Task.FromResult<User?>(requestedEmail == email ? conflictingUser : null);
+        }
+
+        public Task<User> Create(User user, CancellationToken cancellationToken = default) =>
+            throw new InfrastructurePersistenceException("duplicate email");
+    }
+
+    private sealed class OwnershipProbeAuthorService : IAuthorService
+    {
+        public Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+        {
+            if (currentAuthorId != id)
+            {
+                throw new ForbiddenResourceAccessException();
+            }
+
+            return Task.FromResult(new AuthorDTO
+            {
+                Id = id,
+                Name = authorDto.Name
+            });
+        }
+
+        public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+    }
+
+    private sealed class OwnershipProbeProjectService : IProjectService
+    {
+        public Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+        {
+            if (projectDto.AuthorId != currentAuthorId)
+            {
+                throw new ForbiddenResourceAccessException();
+            }
+
+            return Task.FromResult(new ProjectDTO
+            {
+                Id = Guid.NewGuid(),
+                Title = projectDto.Title,
+                Description = projectDto.Description,
+                ReleaseDate = projectDto.ReleaseDate,
+                Version = projectDto.Version,
+                AuthorId = projectDto.AuthorId,
+                IsInDevelopment = projectDto.IsInDevelopment
+            });
+        }
+
+        public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
     }
 
     private sealed class ProblemDetailsResponse
@@ -530,5 +1003,31 @@ public class ProgramIntegrationTest
             new ReferencedAuthorNotFoundException(Guid.NewGuid()),
             HttpStatusCode.BadRequest,
             "Referenced author not found");
+    }
+
+    private static User CreatePersistedUser(string email, string authorName, bool isActive = true)
+    {
+        var userId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        var user = new User(
+            email,
+            "hash",
+            new DateTimeOffset(2026, 06, 24, 0, 0, 0, TimeSpan.Zero),
+            UserRole.User,
+            isActive)
+        {
+            Id = userId
+        };
+
+        var author = new Author(authorName)
+        {
+            Id = authorId,
+            UserId = userId,
+            User = user
+        };
+
+        user.Author = author;
+
+        return user;
     }
 }

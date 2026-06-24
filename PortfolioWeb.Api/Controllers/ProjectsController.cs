@@ -8,7 +8,9 @@ namespace PortfolioWeb.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProjectsController(IProjectService projectService) : ControllerBase
+public class ProjectsController(
+    IProjectService projectService,
+    IAuthService authService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<ProjectDTO>>> GetAll(CancellationToken cancellationToken) =>
@@ -22,6 +24,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ProjectDTO>> Create([FromBody] CreateProjectDTO projectDto, CancellationToken cancellationToken)
     {
+        if (!User.TryGetEmail(out var email))
+        {
+            return Unauthorized();
+        }
+
+        await authService.EnsureCurrentUserIsActive(email, cancellationToken);
+
         if (!User.TryGetAuthorId(out var currentAuthorId))
         {
             return Unauthorized();
@@ -36,6 +45,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProjectDTO>> Update(Guid id, [FromBody] UpdateProjectDTO projectDto, CancellationToken cancellationToken)
     {
+        if (!User.TryGetEmail(out var email))
+        {
+            return Unauthorized();
+        }
+
+        await authService.EnsureCurrentUserIsActive(email, cancellationToken);
+
         if (!User.TryGetAuthorId(out var currentAuthorId))
         {
             return Unauthorized();
@@ -50,6 +66,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
+        if (!User.TryGetEmail(out var email))
+        {
+            return Unauthorized();
+        }
+
+        await authService.EnsureCurrentUserIsActive(email, cancellationToken);
+
         if (!User.TryGetAuthorId(out var currentAuthorId))
         {
             return Unauthorized();

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Domain.Entities;
 using PortfolioWeb.Infrastructure.Repositories;
 using PortfolioWeb.Infrastructure.Tests.Helpers;
@@ -62,6 +63,21 @@ public class UserRepositoryPostgreSqlIntegrationTest
             Assert.That(result!.Email, Is.EqualTo("manuel@portfolio.local"));
             Assert.That(result.Author.Name, Is.EqualTo("Manuel"));
         });
+    }
+
+    [Test]
+    public async Task Create_ShouldThrowInfrastructurePersistenceException_WhenEmailAlreadyExistsInPostgreSql()
+    {
+        await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
+        var repository = new UserRepository(context);
+        var firstUser = CreateUserWithAuthor("manuel@portfolio.local", "Manuel");
+        var duplicateUser = CreateUserWithAuthor("manuel@portfolio.local", "Maria");
+
+        await repository.Create(firstUser);
+
+        Assert.That(
+            async () => await repository.Create(duplicateUser),
+            Throws.InstanceOf<InfrastructurePersistenceException>());
     }
 
     private static User CreateUserWithAuthor(string email, string authorName)

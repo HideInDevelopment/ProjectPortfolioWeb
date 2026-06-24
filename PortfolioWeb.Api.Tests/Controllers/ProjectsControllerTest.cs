@@ -14,6 +14,7 @@ public class ProjectsControllerTest
     public async Task GetAll_ShouldReturnOkWithProjects()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projects = new List<ProjectDTO>
         {
@@ -24,7 +25,7 @@ public class ProjectsControllerTest
             .Setup(service => service.GetAll(cancellationToken))
             .ReturnsAsync(projects);
 
-        var controller = new ProjectsController(projectService.Object);
+        var controller = new ProjectsController(projectService.Object, authService.Object);
 
         var result = await controller.GetAll(cancellationToken);
 
@@ -37,6 +38,7 @@ public class ProjectsControllerTest
     public async Task GetById_ShouldReturnOkWithProject()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projectId = Guid.NewGuid();
         var project = new ProjectDTO { Id = projectId, Title = "PortfolioWeb" };
@@ -45,7 +47,7 @@ public class ProjectsControllerTest
             .Setup(service => service.GetById(projectId, cancellationToken))
             .ReturnsAsync(project);
 
-        var controller = new ProjectsController(projectService.Object);
+        var controller = new ProjectsController(projectService.Object, authService.Object);
 
         var result = await controller.GetById(projectId, cancellationToken);
 
@@ -58,7 +60,9 @@ public class ProjectsControllerTest
     public async Task Create_ShouldReturnCreatedAtActionWithCreatedProject()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
+        const string email = "manuel@portfolio.local";
         var createProjectDto = new CreateProjectDTO
         {
             Title = "PortfolioWeb",
@@ -70,17 +74,21 @@ public class ProjectsControllerTest
         };
         var createdProject = new ProjectDTO { Id = Guid.NewGuid(), Title = "PortfolioWeb" };
 
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive(email, cancellationToken))
+            .Returns(Task.CompletedTask);
+
         projectService
             .Setup(service => service.Create(createProjectDto, createProjectDto.AuthorId, cancellationToken))
             .ReturnsAsync(createdProject);
 
-        var controller = new ProjectsController(projectService.Object)
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = CreateUser(createProjectDto.AuthorId)
+                    User = CreateUser(createProjectDto.AuthorId, email)
                 }
             }
         };
@@ -96,6 +104,7 @@ public class ProjectsControllerTest
             Assert.That(createdAtActionResult.Value, Is.SameAs(createdProject));
         });
 
+        authService.Verify(service => service.EnsureCurrentUserIsActive(email, cancellationToken), Times.Once);
         projectService.Verify(service => service.Create(createProjectDto, createProjectDto.AuthorId, cancellationToken), Times.Once);
     }
 
@@ -103,6 +112,7 @@ public class ProjectsControllerTest
     public async Task Create_ShouldReturnUnauthorized_WhenAuthorIdClaimIsMissing()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var createProjectDto = new CreateProjectDTO
         {
@@ -113,7 +123,46 @@ public class ProjectsControllerTest
             AuthorId = Guid.NewGuid(),
             IsInDevelopment = true
         };
-        var controller = new ProjectsController(projectService.Object)
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken))
+            .Returns(Task.CompletedTask);
+        var controller = new ProjectsController(projectService.Object, authService.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(null, "manuel@portfolio.local")
+                }
+            }
+        };
+
+        var result = await controller.Create(createProjectDto, cancellationToken);
+
+        Assert.That(result.Result, Is.TypeOf<UnauthorizedResult>());
+        authService.Verify(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken), Times.Once);
+        projectService.Verify(service => service.Create(It.IsAny<CreateProjectDTO>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Create_ShouldReturnUnauthorized_WhenEmailClaimIsMissing()
+    {
+        var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
+        var cancellationToken = new CancellationTokenSource().Token;
+        var createProjectDto = new CreateProjectDTO
+        {
+            Title = "PortfolioWeb",
+            Description = "Personal portfolio website.",
+            ReleaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+            Version = 1,
+            AuthorId = Guid.NewGuid(),
+            IsInDevelopment = true
+        };
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken))
+            .Returns(Task.CompletedTask);
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -127,6 +176,7 @@ public class ProjectsControllerTest
         var result = await controller.Create(createProjectDto, cancellationToken);
 
         Assert.That(result.Result, Is.TypeOf<UnauthorizedResult>());
+        authService.Verify(service => service.EnsureCurrentUserIsActive(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         projectService.Verify(service => service.Create(It.IsAny<CreateProjectDTO>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -134,9 +184,11 @@ public class ProjectsControllerTest
     public async Task Update_ShouldReturnOkWithUpdatedProject()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projectId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
+        const string email = "manuel@portfolio.local";
         var updateProjectDto = new UpdateProjectDTO
         {
             Title = "Updated",
@@ -146,17 +198,21 @@ public class ProjectsControllerTest
         };
         var updatedProject = new ProjectDTO { Id = projectId, Title = "Updated" };
 
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive(email, cancellationToken))
+            .Returns(Task.CompletedTask);
+
         projectService
             .Setup(service => service.Update(projectId, updateProjectDto, authorId, cancellationToken))
             .ReturnsAsync(updatedProject);
 
-        var controller = new ProjectsController(projectService.Object)
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = CreateUser(authorId)
+                    User = CreateUser(authorId, email)
                 }
             }
         };
@@ -165,6 +221,7 @@ public class ProjectsControllerTest
 
         Assert.That(result.Result, Is.TypeOf<OkObjectResult>());
         Assert.That(((OkObjectResult)result.Result!).Value, Is.SameAs(updatedProject));
+        authService.Verify(service => service.EnsureCurrentUserIsActive(email, cancellationToken), Times.Once);
         projectService.Verify(service => service.Update(projectId, updateProjectDto, authorId, cancellationToken), Times.Once);
     }
 
@@ -172,6 +229,7 @@ public class ProjectsControllerTest
     public async Task Update_ShouldReturnUnauthorized_WhenAuthorIdClaimIsMissing()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projectId = Guid.NewGuid();
         var updateProjectDto = new UpdateProjectDTO
@@ -181,13 +239,13 @@ public class ProjectsControllerTest
             Version = 2,
             IsInDevelopment = false
         };
-        var controller = new ProjectsController(projectService.Object)
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = new ClaimsPrincipal(new ClaimsIdentity())
+                    User = CreateUser(null, "manuel@portfolio.local")
                 }
             }
         };
@@ -195,6 +253,7 @@ public class ProjectsControllerTest
         var result = await controller.Update(projectId, updateProjectDto, cancellationToken);
 
         Assert.That(result.Result, Is.TypeOf<UnauthorizedResult>());
+        authService.Verify(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken), Times.Once);
         projectService.Verify(service => service.Update(It.IsAny<Guid>(), It.IsAny<UpdateProjectDTO>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -202,21 +261,27 @@ public class ProjectsControllerTest
     public async Task Delete_ShouldReturnNoContent()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projectId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
+        const string email = "manuel@portfolio.local";
+
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive(email, cancellationToken))
+            .Returns(Task.CompletedTask);
 
         projectService
             .Setup(service => service.Delete(projectId, authorId, cancellationToken))
             .Returns(Task.CompletedTask);
 
-        var controller = new ProjectsController(projectService.Object)
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = CreateUser(authorId)
+                    User = CreateUser(authorId, email)
                 }
             }
         };
@@ -224,6 +289,7 @@ public class ProjectsControllerTest
         var result = await controller.Delete(projectId, cancellationToken);
 
         Assert.That(result, Is.TypeOf<NoContentResult>());
+        authService.Verify(service => service.EnsureCurrentUserIsActive(email, cancellationToken), Times.Once);
         projectService.Verify(service => service.Delete(projectId, authorId, cancellationToken), Times.Once);
     }
 
@@ -231,15 +297,19 @@ public class ProjectsControllerTest
     public async Task Delete_ShouldReturnUnauthorized_WhenAuthorIdClaimIsMissing()
     {
         var projectService = new Mock<IProjectService>();
+        var authService = new Mock<IAuthService>();
         var cancellationToken = new CancellationTokenSource().Token;
         var projectId = Guid.NewGuid();
-        var controller = new ProjectsController(projectService.Object)
+        authService
+            .Setup(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken))
+            .Returns(Task.CompletedTask);
+        var controller = new ProjectsController(projectService.Object, authService.Object)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = new ClaimsPrincipal(new ClaimsIdentity())
+                    User = CreateUser(null, "manuel@portfolio.local")
                 }
             }
         };
@@ -247,16 +317,27 @@ public class ProjectsControllerTest
         var result = await controller.Delete(projectId, cancellationToken);
 
         Assert.That(result, Is.TypeOf<UnauthorizedResult>());
+        authService.Verify(service => service.EnsureCurrentUserIsActive("manuel@portfolio.local", cancellationToken), Times.Once);
         projectService.Verify(service => service.Delete(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private static ClaimsPrincipal CreateUser(Guid authorId)
+    private static ClaimsPrincipal CreateUser(Guid? authorId, string? email)
     {
+        var claims = new List<Claim>();
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            claims.Add(new Claim(ClaimTypes.Email, email));
+        }
+
+        if (authorId.HasValue)
+        {
+            claims.Add(new Claim("authorId", authorId.Value.ToString()));
+        }
+
         return new ClaimsPrincipal(
             new ClaimsIdentity(
-            [
-                new Claim("authorId", authorId.ToString())
-            ],
+            claims,
             authenticationType: "Test"));
     }
 }

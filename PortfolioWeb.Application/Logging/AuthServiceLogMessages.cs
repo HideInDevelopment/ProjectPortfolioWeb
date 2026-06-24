@@ -42,4 +42,13 @@ internal static partial class AuthServiceLogMessages
 
     [LoggerMessage(EventId = 3013, Level = LogLevel.Information, Message = "User logged in successfully. UserId: {UserId}, AuthorId: {AuthorId}")]
     public static partial void UserLoggedInSuccessfully(this ILogger logger, Guid userId, Guid authorId);
+
+    [LoggerMessage(EventId = 3014, Level = LogLevel.Information, Message = "Validating authenticated user. Email: {Email}")]
+    public static partial void ValidatingAuthenticatedUser(this ILogger logger, string email);
+
+    [LoggerMessage(EventId = 3015, Level = LogLevel.Warning, Message = "Authenticated request rejected because the user was not found. Email: {Email}")]
+    public static partial void AuthenticatedRequestRejectedBecauseUserWasNotFound(this ILogger logger, string email);
+
+    [LoggerMessage(EventId = 3016, Level = LogLevel.Warning, Message = "Authenticated request rejected because the user is inactive. UserId: {UserId}")]
+    public static partial void AuthenticatedRequestRejectedBecauseUserIsInactive(this ILogger logger, Guid userId);
 }

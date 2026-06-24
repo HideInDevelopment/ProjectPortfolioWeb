@@ -5,6 +5,7 @@ using Moq;
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Services;
+using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
 
@@ -98,6 +99,32 @@ public class AuthServiceTest
 
         Assert.That(exception!.Message, Is.EqualTo($"The email '{email}' is already registered."));
         _userRepositoryMock.Verify(x => x.Create(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public void Register_ShouldThrowDuplicateEmailException_WhenCreateFailsButEmailAlreadyExistsAfterPersistenceError()
+    {
+        const string email = "manuel@portfolio.local";
+        var persistedUser = CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), email, "Manuel", true);
+
+        _userRepositoryMock
+            .SetupSequence(x => x.GetByEmail(email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(persistedUser);
+
+        _userRepositoryMock
+            .Setup(x => x.Create(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InfrastructurePersistenceException("duplicate email"));
+
+        var exception = Assert.ThrowsAsync<DuplicateEmailException>(async () =>
+            await _authService.Register(new RegisterUserDTO
+            {
+                Email = email,
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+
+        Assert.That(exception!.Message, Is.EqualTo($"The email '{email}' is already registered."));
     }
 
     [Test]
@@ -246,6 +273,48 @@ public class AuthServiceTest
             Assert.That(token.Claims.Single(claim => claim.Type == JwtRegisteredClaimNames.Email).Value, Is.EqualTo("manuel@portfolio.local"));
             Assert.That(token.Claims.Single(claim => claim.Type == "authorId").Value, Is.EqualTo(user.Author.Id.ToString()));
         });
+    }
+
+    [Test]
+    public async Task EnsureCurrentUserIsActive_ShouldComplete_WhenUserExistsAndIsActive()
+    {
+        var user = CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), "manuel@portfolio.local", "Manuel", true);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _authService.EnsureCurrentUserIsActive("  Manuel@Portfolio.Local  ");
+
+        _userRepositoryMock.Verify(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public void EnsureCurrentUserIsActive_ShouldThrowInvalidCredentialsException_WhenUserDoesNotExist()
+    {
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        var exception = Assert.ThrowsAsync<InvalidCredentialsException>(async () =>
+            await _authService.EnsureCurrentUserIsActive("manuel@portfolio.local"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The provided credentials are not valid."));
+    }
+
+    [Test]
+    public void EnsureCurrentUserIsActive_ShouldThrowInactiveUserException_WhenUserIsInactive()
+    {
+        var user = CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), "manuel@portfolio.local", "Manuel", false);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var exception = Assert.ThrowsAsync<InactiveUserException>(async () =>
+            await _authService.EnsureCurrentUserIsActive("manuel@portfolio.local"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The user account is inactive."));
     }
 
     private static User CreateUserWithAuthor(Guid userId, Guid authorId, string email, string authorName, bool isActive)

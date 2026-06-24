@@ -8,7 +8,9 @@ namespace PortfolioWeb.Api.Controllers;
  
 [ApiController]
 [Route("api/[controller]")]
-public class AuthorsController(IAuthorService authorService) : ControllerBase
+public class AuthorsController(
+    IAuthorService authorService,
+    IAuthService authService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<AuthorDTO>>> GetAll(CancellationToken cancellationToken) =>
@@ -22,6 +24,13 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AuthorDTO>> Update(Guid id, [FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
     {
+        if (!User.TryGetEmail(out var email))
+        {
+            return Unauthorized();
+        }
+
+        await authService.EnsureCurrentUserIsActive(email, cancellationToken);
+
         if (!User.TryGetAuthorId(out var currentAuthorId))
         {
             return Unauthorized();
@@ -36,6 +45,13 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
+        if (!User.TryGetEmail(out var email))
+        {
+            return Unauthorized();
+        }
+
+        await authService.EnsureCurrentUserIsActive(email, cancellationToken);
+
         if (!User.TryGetAuthorId(out var currentAuthorId))
         {
             return Unauthorized();

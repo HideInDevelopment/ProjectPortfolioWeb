@@ -5,6 +5,7 @@ using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Logging;
 using PortfolioWeb.Application.Security;
+using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
 
@@ -44,7 +45,24 @@ public class AuthService(
 
         user.Author = author;
 
-        var createdUser = await userRepository.Create(user, cancellationToken);
+        User createdUser;
+
+        try
+        {
+            createdUser = await userRepository.Create(user, cancellationToken);
+        }
+        catch (InfrastructurePersistenceException)
+        {
+            var conflictingUser = await userRepository.GetByEmail(normalizedEmail, cancellationToken);
+
+            if (conflictingUser is not null)
+            {
+                logger.RegistrationRejectedBecauseEmailAlreadyExists(normalizedEmail);
+                throw new DuplicateEmailException(normalizedEmail);
+            }
+
+            throw;
+        }
 
         logger.UserRegisteredSuccessfully(createdUser.Id, createdUser.Author.Id);
 
@@ -81,6 +99,27 @@ public class AuthService(
         logger.UserLoggedInSuccessfully(user.Id, user.Author.Id);
 
         return JwtTokenFactory.Create(user, configuration);
+    }
+
+    public async Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        logger.ValidatingAuthenticatedUser(normalizedEmail);
+
+        var user = await userRepository.GetByEmail(normalizedEmail, cancellationToken);
+
+        if (user is null)
+        {
+            logger.AuthenticatedRequestRejectedBecauseUserWasNotFound(normalizedEmail);
+            throw new InvalidCredentialsException();
+        }
+
+        if (!user.IsActive)
+        {
+            logger.AuthenticatedRequestRejectedBecauseUserIsInactive(user.Id);
+            throw new InactiveUserException();
+        }
     }
 
     private static string NormalizeRequiredEmail(string email, ILogger logger, bool isRegistration)
