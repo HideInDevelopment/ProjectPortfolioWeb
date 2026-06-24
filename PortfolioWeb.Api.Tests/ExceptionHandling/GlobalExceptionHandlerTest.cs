@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PortfolioWeb.Api.ExceptionHandling;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Core.Contracts.Exceptions;
@@ -13,6 +14,11 @@ public class GlobalExceptionHandlerTest
     private static IEnumerable<TestCaseData> ExceptionMappings()
     {
         yield return new TestCaseData(
+            new InvalidAuthRequestException("invalid auth request"),
+            StatusCodes.Status400BadRequest,
+            "Invalid auth request",
+            LogLevel.Warning);
+        yield return new TestCaseData(
             new InvalidAuthorIdException(),
             StatusCodes.Status400BadRequest,
             "Invalid author id",
@@ -21,6 +27,21 @@ public class GlobalExceptionHandlerTest
             new AuthorCreationRequiresUserException(),
             StatusCodes.Status400BadRequest,
             "Author creation requires user registration",
+            LogLevel.Warning);
+        yield return new TestCaseData(
+            new DuplicateEmailException("manuel@portfolio.local"),
+            StatusCodes.Status409Conflict,
+            "Duplicate email",
+            LogLevel.Warning);
+        yield return new TestCaseData(
+            new InvalidCredentialsException(),
+            StatusCodes.Status401Unauthorized,
+            "Invalid credentials",
+            LogLevel.Warning);
+        yield return new TestCaseData(
+            new InactiveUserException(),
+            StatusCodes.Status403Forbidden,
+            "Inactive user",
             LogLevel.Warning);
         yield return new TestCaseData(
             new InvalidProjectIdException(),

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
@@ -183,6 +184,76 @@ public class ProgramIntegrationTest
         });
     }
 
+    [TestCaseSource(nameof(AuthExceptionMappings))]
+    public async Task ExceptionHandler_ShouldReturnExpectedProblemDetails_ForAuthExceptions(
+        Exception exception,
+        HttpStatusCode expectedStatusCode,
+        string expectedTitle)
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(exception));
+
+        var response = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password"
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo(expectedTitle));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)expectedStatusCode));
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(
+            new Exception("Auth service should not be reached for invalid payloads.")));
+
+        using var response = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+        });
+    }
+
+    [Test]
+    public async Task Login_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(
+            new Exception("Auth service should not be reached for invalid payloads.")));
+
+        using var response = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = ""
+            }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+        });
+    }
+
     private HttpClient CreateClientWithAuthorService(IAuthorService authorService)
     {
         return factory.WithWebHostBuilder(builder =>
@@ -207,6 +278,22 @@ public class ProgramIntegrationTest
                 {
                     services.RemoveAll<IProjectService>();
                     services.AddSingleton(projectService);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = true
+            });
+    }
+
+    private HttpClient CreateClientWithAuthService(IAuthService authService)
+    {
+        return factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IAuthService>();
+                    services.AddSingleton(authService);
                 });
             })
             .CreateClient(new WebApplicationFactoryClientOptions
@@ -259,6 +346,15 @@ public class ProgramIntegrationTest
             throw new NotImplementedException();
     }
 
+    private sealed class ThrowingAuthService(Exception exception) : IAuthService
+    {
+        public Task<AuthResponseDTO> Register(RegisterUserDTO registerUserDto, CancellationToken cancellationToken = default) =>
+            throw exception;
+
+        public Task<AuthResponseDTO> Login(LoginUserDTO loginUserDto, CancellationToken cancellationToken = default) =>
+            throw exception;
+    }
+
     private sealed class ProblemDetailsResponse
     {
         public int? Status { get; set; }
@@ -292,6 +388,26 @@ public class ProgramIntegrationTest
             new InfrastructurePersistenceException("persistence error"),
             HttpStatusCode.InternalServerError,
             "Database persistence error");
+    }
+
+    private static IEnumerable<TestCaseData> AuthExceptionMappings()
+    {
+        yield return new TestCaseData(
+            new InvalidAuthRequestException("invalid auth request"),
+            HttpStatusCode.BadRequest,
+            "Invalid auth request");
+        yield return new TestCaseData(
+            new DuplicateEmailException("manuel@portfolio.local"),
+            HttpStatusCode.Conflict,
+            "Duplicate email");
+        yield return new TestCaseData(
+            new InvalidCredentialsException(),
+            HttpStatusCode.Unauthorized,
+            "Invalid credentials");
+        yield return new TestCaseData(
+            new InactiveUserException(),
+            HttpStatusCode.Forbidden,
+            "Inactive user");
     }
 
     private static IEnumerable<TestCaseData> ProjectExceptionMappings()

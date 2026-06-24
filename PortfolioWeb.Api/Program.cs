@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using PortfolioWeb.Application;
 using PortfolioWeb.Api.ExceptionHandling;
 using PortfolioWeb.Infrastructure;
@@ -11,6 +14,29 @@ builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var issuer = builder.Configuration["Authentication:Issuer"]
+            ?? throw new InvalidOperationException("Authentication issuer is not configured.");
+        var audience = builder.Configuration["Authentication:Audience"]
+            ?? throw new InvalidOperationException("Authentication audience is not configured.");
+        var signingKey = builder.Configuration["Authentication:SigningKey"]
+            ?? throw new InvalidOperationException("Authentication signing key is not configured.");
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+builder.Services.AddAuthorization();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 // TODO: Review and update EF Core packages when a newer patched version is adopted to remove this temporary transitive package pin.
@@ -18,6 +44,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {

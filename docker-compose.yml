@@ -24,6 +24,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PortfolioWebDatabase: Host=postgres;Port=5432;Database=portfolio_web;Username=postgres;Password=postgres
+      Authentication__Issuer: PortfolioWeb
+      Authentication__Audience: PortfolioWebClient
+      Authentication__SigningKey: ThisIsADockerDevelopmentSigningKey123456789
+      Authentication__ExpirationMinutes: 60
     ports:
       - "8080:8080"
     depends_on:

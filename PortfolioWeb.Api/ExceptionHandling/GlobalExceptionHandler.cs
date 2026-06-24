@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Core.Contracts.Exceptions;
@@ -49,8 +50,12 @@ public class GlobalExceptionHandler(
     {
         return exception switch
         {
+            InvalidAuthRequestException => (StatusCodes.Status400BadRequest, "Invalid auth request"),
             InvalidAuthorIdException => (StatusCodes.Status400BadRequest, "Invalid author id"),
             AuthorCreationRequiresUserException => (StatusCodes.Status400BadRequest, "Author creation requires user registration"),
+            DuplicateEmailException => (StatusCodes.Status409Conflict, "Duplicate email"),
+            InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
+            InactiveUserException => (StatusCodes.Status403Forbidden, "Inactive user"),
             InvalidProjectIdException => (StatusCodes.Status400BadRequest, "Invalid project id"),
             ReferencedAuthorNotFoundException => (StatusCodes.Status400BadRequest, "Referenced author not found"),
             AuthorNotFoundException => (StatusCodes.Status404NotFound, "Author not found"),
