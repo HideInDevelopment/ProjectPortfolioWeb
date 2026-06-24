@@ -69,6 +69,17 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Any iteration that introduces code or changes existing code must be covered by tests.
 - After adding or updating those tests, run the skill [skills/post-iteration-validation/SKILL.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/skills/post-iteration-validation/SKILL.md) to validate the appropriate scope.
 - After the normal validation pass is green, run [skills/destructive-test-review/SKILL.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/skills/destructive-test-review/SKILL.md) to review the tests with an adversarial mindset and detect false positives, happy-path bias, weak assertions, or missing branches.
+- A manual subagent definition also exists at [.agents/destructive-test-review/SUBAGENT.md](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/.agents/destructive-test-review/SUBAGENT.md).
+- This subagent is the preferred mechanism when the user explicitly wants an independent review of tests written by the coding agent itself.
+- The trigger is manual, not automatic.
+- Recommended manual prompt:
+  - `Ejecuta el subagente analizador de tests`
+- The test-review subagent should avoid being influenced by the coding agent's explanations where possible and should prioritize direct inspection of files, diffs, tests, and observed behavior.
+- Expected output from that subagent:
+  - a list of weak or misleading tests
+  - possible hidden bugs those tests would miss
+  - tests that do not meet quality requirements
+  - residual risks
 - Coverage runs must use [coverage.runsettings](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/coverage.runsettings) so the exclusion policy is stable and explicit.
 - Test order in that script:
   1. `PortfolioWeb.Application.Tests`
@@ -99,5 +110,7 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Read the touched slice end to end before editing: controller -> service -> repository -> tests.
 - If you change a contract in `*.Contract` or `Core.Contracts`, expect fallout in tests and in the corresponding implementation project.
 - Prefer updating existing tests over adding new layers of helpers.
-- Do not close a code iteration without test coverage for the introduced behavior, a normal validation run aligned with that scope, and a destructive review of the resulting tests.
+- Do not close a code iteration without test coverage for the introduced behavior and a normal validation run aligned with that scope.
+- For slices with meaningful logic or risk, prefer a destructive review of the resulting tests.
+- If the user explicitly asks for an independent test audit, use the manual subagent definition in `.agents/destructive-test-review`.
 - Keep changes small. This repo currently favors straightforward code over reusable abstractions.

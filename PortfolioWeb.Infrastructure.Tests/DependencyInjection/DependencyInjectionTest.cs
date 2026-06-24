@@ -22,6 +22,7 @@ public class DependencyInjectionTest
         var result = services.AddInfrastructure(configuration);
         var authorRepositoryDescriptor = services.Single(service => service.ServiceType == typeof(IAuthorRepository));
         var projectRepositoryDescriptor = services.Single(service => service.ServiceType == typeof(IProjectRepository));
+        var userRepositoryDescriptor = services.Single(service => service.ServiceType == typeof(IUserRepository));
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
         using var context = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
@@ -33,6 +34,8 @@ public class DependencyInjectionTest
             Assert.That(authorRepositoryDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
             Assert.That(projectRepositoryDescriptor.ImplementationType, Is.EqualTo(typeof(ProjectRepository)));
             Assert.That(projectRepositoryDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+            Assert.That(userRepositoryDescriptor.ImplementationType, Is.EqualTo(typeof(UserRepository)));
+            Assert.That(userRepositoryDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
             Assert.That(context.Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
         });
     }

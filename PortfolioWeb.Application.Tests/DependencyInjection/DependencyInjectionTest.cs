@@ -17,6 +17,8 @@ public class DependencyInjectionTest
 
         var authorServiceDescriptor = services.Single(service =>
             service.ServiceType == typeof(IAuthorService));
+        var authServiceDescriptor = services.Single(service =>
+            service.ServiceType == typeof(IAuthService));
         var projectServiceDescriptor = services.Single(service =>
             service.ServiceType == typeof(IProjectService));
 
@@ -24,6 +26,8 @@ public class DependencyInjectionTest
         {
             Assert.That(authorServiceDescriptor.ImplementationType, Is.EqualTo(typeof(AuthorService)));
             Assert.That(authorServiceDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+            Assert.That(authServiceDescriptor.ImplementationType, Is.EqualTo(typeof(AuthService)));
+            Assert.That(authServiceDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
             Assert.That(projectServiceDescriptor.ImplementationType, Is.EqualTo(typeof(ProjectService)));
             Assert.That(projectServiceDescriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
         });
