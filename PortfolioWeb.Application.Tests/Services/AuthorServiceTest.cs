@@ -98,31 +98,20 @@ public class AuthorServiceTest
     }
 
     [Test]
-    public async Task Create_ShouldMapPersistAuthorDtoAndReturnCreatedAuthorDto()
+    public void Create_ShouldThrowAuthorCreationRequiresUserException()
     {
         var authorDto = new PersistAuthorDTO
         {
             Name = "Manuel"
         };
 
-        Author? createdAuthorArgument = null;
-        var persistedAuthor = CreateAuthor(Guid.NewGuid(), "Manuel");
+        var exception = Assert.ThrowsAsync<AuthorCreationRequiresUserException>(
+            async () => await _authorService.Create(authorDto));
 
-        _authorRepositoryMock
-            .Setup(x => x.Create(It.IsAny<Author>(), It.IsAny<CancellationToken>()))
-            .Callback<Author, CancellationToken>((author, _) => createdAuthorArgument = author)
-            .ReturnsAsync(persistedAuthor);
-
-        var result = await _authorService.Create(authorDto);
-
-        Assert.That(createdAuthorArgument, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(createdAuthorArgument!.Name, Is.EqualTo("Manuel"));
-            Assert.That(createdAuthorArgument.Id, Is.EqualTo(Guid.Empty));
-            Assert.That(result.Id, Is.EqualTo(persistedAuthor.Id));
-            Assert.That(result.Name, Is.EqualTo("Manuel"));
-        });
+        Assert.That(exception!.Message, Is.EqualTo("Authors must be created through user registration."));
+        _authorRepositoryMock.Verify(
+            x => x.Create(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Test]

@@ -227,9 +227,12 @@ public class AuthorRepositoryTest
 
     private static Author CreateAuthor(Guid authorId, string name, params Project[] projects)
     {
+        var userId = Guid.NewGuid();
         var author = new Author(name)
         {
-            Id = authorId
+            Id = authorId,
+            UserId = userId,
+            User = CreateUser(userId)
         };
 
         foreach (var project in projects)
@@ -251,6 +254,19 @@ public class AuthorRepositoryTest
             true)
         {
             Id = Guid.NewGuid()
+        };
+    }
+
+    private static User CreateUser(Guid userId)
+    {
+        return new User(
+            $"user-{userId:N}@portfolio.local",
+            "hash",
+            new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+            UserRole.User,
+            true)
+        {
+            Id = userId
         };
     }
 }

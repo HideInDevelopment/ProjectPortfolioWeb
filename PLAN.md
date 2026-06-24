@@ -104,7 +104,7 @@ Este punto pasa a ser requisito de cierre del MVP.
 - [ ] Alta unica: al registrarse se crean `User` y `Author` en la misma operacion
 - [ ] Borrado en cascada: `User -> Author -> Projects`
 - [ ] `Email` unico
-- [ ] `AuthorId` unico
+- [ ] `UserId` unico en `Author`
 - [ ] Base de datos actual prescindible: se asume `drop database` y nueva migracion
 
 #### Modelo de dominio esperado
@@ -112,7 +112,6 @@ Este punto pasa a ser requisito de cierre del MVP.
   - `Id`
   - `Email`
   - `PasswordHash`
-  - `AuthorId`
   - `CreatedDate`
   - `Role`
   - `IsActive`
@@ -124,15 +123,15 @@ Este punto pasa a ser requisito de cierre del MVP.
 - [ ] Crear `PortfolioWeb.Domain/Entities/User.cs`
 - [ ] Definir navegacion `User -> Author`
 - [ ] Definir navegacion `Author -> User`
+- [ ] Hacer que `Author` dependa de `User` mediante `UserId`
 - [ ] Mantener constructores simples y orientados al flujo real
-- [ ] Decidir si `Role` es `string` o `enum`
-  - recomendacion actual: `string` con valor inicial `User` para evitar sobreingenieria
+- [ ] Usar `enum` simple para `Role`
 
 #### Persistencia
 - [ ] Crear configuracion EF Core para `User`
 - [ ] Configurar indices unicos para:
   - `Email`
-  - `AuthorId`
+  - `UserId` en `Author`
 - [ ] Configurar la relacion `User 1:1 Author`
 - [ ] Configurar delete cascade completo
 - [ ] Generar nueva migracion de esquema tras recrear la base
@@ -142,8 +141,8 @@ Este punto pasa a ser requisito de cierre del MVP.
 - [ ] Crear `UserEntityTypeConfiguration`
 - [ ] Configurar tabla `users`
 - [ ] Configurar `Email` unico
-- [ ] Configurar `AuthorId` unico
-- [ ] Configurar FK `User -> Author`
+- [ ] Configurar `UserId` unico en `Author`
+- [ ] Configurar FK `Author -> User`
 - [ ] Configurar cascade delete
 - [ ] Borrar base actual y generar nueva migracion limpia
 - [ ] Verificar que Docker + auto-migration siguen funcionando

@@ -9,6 +9,8 @@ public class PortfolioWebDbContext(DbContextOptions<PortfolioWebDbContext> optio
 
     public DbSet<Project> Projects => Set<Project>();
 
+    public DbSet<User> Users => Set<User>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PortfolioWebDbContext).Assembly);

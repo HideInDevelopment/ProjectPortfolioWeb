@@ -26,7 +26,7 @@ public class ProjectRepositoryPostgreSqlIntegrationTest
     {
         await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
         var authorId = Guid.NewGuid();
-        context.Authors.Add(new Author("Manuel") { Id = authorId });
+        context.Authors.Add(CreateAuthor(authorId, "Manuel"));
         await context.SaveChangesAsync();
 
         var repository = new ProjectRepository(context);
@@ -50,7 +50,7 @@ public class ProjectRepositoryPostgreSqlIntegrationTest
     {
         await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
         var authorId = Guid.NewGuid();
-        context.Authors.Add(new Author("Manuel") { Id = authorId });
+        context.Authors.Add(CreateAuthor(authorId, "Manuel"));
         context.Projects.Add(CreateProject(Guid.NewGuid(), authorId, "Project 1", 1, true));
         context.Projects.Add(CreateProject(Guid.NewGuid(), authorId, "Project 2", 2, false));
         await context.SaveChangesAsync();
@@ -72,7 +72,7 @@ public class ProjectRepositoryPostgreSqlIntegrationTest
         await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
         var authorId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
-        context.Authors.Add(new Author("Manuel") { Id = authorId });
+        context.Authors.Add(CreateAuthor(authorId, "Manuel"));
         context.Projects.Add(CreateProject(projectId, authorId, "Original", 1, true));
         await context.SaveChangesAsync();
 
@@ -100,7 +100,7 @@ public class ProjectRepositoryPostgreSqlIntegrationTest
         await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
         var authorId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
-        context.Authors.Add(new Author("Manuel") { Id = authorId });
+        context.Authors.Add(CreateAuthor(authorId, "Manuel"));
         var project = CreateProject(projectId, authorId, "PortfolioWeb", 1, true);
         context.Projects.Add(project);
         await context.SaveChangesAsync();
@@ -126,6 +126,26 @@ public class ProjectRepositoryPostgreSqlIntegrationTest
             isInDevelopment)
         {
             Id = projectId
+        };
+    }
+
+    private static Author CreateAuthor(Guid authorId, string name)
+    {
+        var userId = Guid.NewGuid();
+
+        return new Author(name)
+        {
+            Id = authorId,
+            UserId = userId,
+            User = new User(
+                $"user-{userId:N}@portfolio.local",
+                "hash",
+                new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+                UserRole.User,
+                true)
+            {
+                Id = userId
+            }
         };
     }
 }

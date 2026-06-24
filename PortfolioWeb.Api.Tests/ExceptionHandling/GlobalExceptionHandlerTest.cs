@@ -18,6 +18,11 @@ public class GlobalExceptionHandlerTest
             "Invalid author id",
             LogLevel.Warning);
         yield return new TestCaseData(
+            new AuthorCreationRequiresUserException(),
+            StatusCodes.Status400BadRequest,
+            "Author creation requires user registration",
+            LogLevel.Warning);
+        yield return new TestCaseData(
             new InvalidProjectIdException(),
             StatusCodes.Status400BadRequest,
             "Invalid project id",

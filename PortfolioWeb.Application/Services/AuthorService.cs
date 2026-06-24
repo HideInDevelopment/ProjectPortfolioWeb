@@ -43,13 +43,8 @@ public class AuthorService(
     public async Task<AuthorDTO> Create(PersistAuthorDTO authorDto, CancellationToken cancellationToken = default)
     {
         logger.CreatingAuthor(authorDto.Name);
-
-        var author = AuthorMapper.MapToEntity(authorDto);
-        var createdAuthor = await authorRepository.Create(author, cancellationToken);
-
-        logger.AuthorCreatedSuccessfully(createdAuthor.Id, createdAuthor.Name);
-
-        return AuthorMapper.MapToDTO(createdAuthor);
+        logger.AuthorCreationRejectedBecauseItRequiresUserRegistration();
+        throw new AuthorCreationRequiresUserException();
     }
 
     public async Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default)

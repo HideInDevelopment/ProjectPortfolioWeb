@@ -12,7 +12,7 @@ using PortfolioWeb.Infrastructure.Persistence;
 namespace PortfolioWeb.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PortfolioWebDbContext))]
-    [Migration("20260608184706_InitialCreate")]
+    [Migration("20260624101733_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -37,7 +37,13 @@ namespace PortfolioWeb.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("authors", (string)null);
                 });
@@ -78,6 +84,50 @@ namespace PortfolioWeb.Infrastructure.Persistence.Migrations
                     b.ToTable("projects", (string)null);
                 });
 
+            modelBuilder.Entity("PortfolioWeb.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("PortfolioWeb.Domain.Entities.Author", b =>
+                {
+                    b.HasOne("PortfolioWeb.Domain.Entities.User", "User")
+                        .WithOne("Author")
+                        .HasForeignKey("PortfolioWeb.Domain.Entities.Author", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PortfolioWeb.Domain.Entities.Project", b =>
                 {
                     b.HasOne("PortfolioWeb.Domain.Entities.Author", null)
@@ -90,6 +140,12 @@ namespace PortfolioWeb.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("PortfolioWeb.Domain.Entities.Author", b =>
                 {
                     b.Navigation("Projects");
+                });
+
+            modelBuilder.Entity("PortfolioWeb.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Author")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

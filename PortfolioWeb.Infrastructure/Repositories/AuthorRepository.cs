@@ -106,7 +106,7 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
 
         try
         {
-            dbContext.Entry(existingAuthor).CurrentValues.SetValues(author);
+            existingAuthor.Name = author.Name;
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return existingAuthor;

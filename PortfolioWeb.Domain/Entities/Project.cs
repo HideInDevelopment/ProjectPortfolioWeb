@@ -2,6 +2,7 @@ namespace PortfolioWeb.Domain.Entities;
 
 public class Project
 {
+    // Required by EF Core when materializing the entity from persistence.
     private Project()
     {
         Title = string.Empty;

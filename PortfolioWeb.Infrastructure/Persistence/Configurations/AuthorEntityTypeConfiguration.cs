@@ -20,8 +20,19 @@ public class AuthorEntityTypeConfiguration : IEntityTypeConfiguration<Author>
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(author => author.UserId)
+            .IsRequired();
+
+        builder.HasIndex(author => author.UserId)
+            .IsUnique();
+
         builder.Navigation(author => author.Projects)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasOne(author => author.User)
+            .WithOne(user => user.Author)
+            .HasForeignKey<Author>(author => author.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(author => author.Projects)
             .WithOne()

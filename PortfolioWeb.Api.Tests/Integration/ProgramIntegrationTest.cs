@@ -273,6 +273,10 @@ public class ProgramIntegrationTest
             HttpStatusCode.BadRequest,
             "Invalid author id");
         yield return new TestCaseData(
+            new AuthorCreationRequiresUserException(),
+            HttpStatusCode.BadRequest,
+            "Author creation requires user registration");
+        yield return new TestCaseData(
             new AuthorNotFoundException(Guid.NewGuid()),
             HttpStatusCode.NotFound,
             "Author not found");
