@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Services;
@@ -142,9 +143,34 @@ public class ProjectServiceTest
         };
 
         var exception = Assert.ThrowsAsync<InvalidAuthorIdException>(
-            async () => await _projectService.Create(projectDto));
+            async () => await _projectService.Create(projectDto, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided author id is not valid."));
+        _authorRepositoryMock.Verify(
+            x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _projectRepositoryMock.Verify(
+            x => x.Create(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void Create_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
+    {
+        var projectDto = new CreateProjectDTO
+        {
+            Title = "VetApp",
+            Description = "Vet manager for schedule appointments.",
+            ReleaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+            Version = 1,
+            AuthorId = Guid.NewGuid(),
+            IsInDevelopment = true
+        };
+
+        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
+            async () => await _projectService.Create(projectDto, Guid.NewGuid()));
+
+        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _authorRepositoryMock.Verify(
             x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -172,7 +198,7 @@ public class ProjectServiceTest
             .ReturnsAsync((Author?)null);
 
         var exception = Assert.ThrowsAsync<ReferencedAuthorNotFoundException>(
-            async () => await _projectService.Create(projectDto));
+            async () => await _projectService.Create(projectDto, authorId));
 
         Assert.That(exception!.Message, Is.EqualTo($"The referenced author with id '{authorId}' was not found."));
         _projectRepositoryMock.Verify(
@@ -219,7 +245,7 @@ public class ProjectServiceTest
             .Callback<Project, CancellationToken>((project, _) => createdProjectArgument = project)
             .ReturnsAsync(persistedProject);
 
-        var result = await _projectService.Create(projectDto);
+        var result = await _projectService.Create(projectDto, authorId);
 
         Assert.That(createdProjectArgument, Is.Not.Null);
         Assert.Multiple(() =>
@@ -248,7 +274,7 @@ public class ProjectServiceTest
         };
 
         var exception = Assert.ThrowsAsync<InvalidProjectIdException>(
-            async () => await _projectService.Update(Guid.Empty, projectDto));
+            async () => await _projectService.Update(Guid.Empty, projectDto, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided project id is not valid."));
         _projectRepositoryMock.Verify(
@@ -276,7 +302,7 @@ public class ProjectServiceTest
             .ReturnsAsync((Project?)null);
 
         var exception = Assert.ThrowsAsync<ProjectNotFoundException>(
-            async () => await _projectService.Update(projectId, projectDto));
+            async () => await _projectService.Update(projectId, projectDto, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo($"The project with id '{projectId}' was not found."));
         _projectRepositoryMock.Verify(
@@ -326,7 +352,7 @@ public class ProjectServiceTest
             .Callback<Project, CancellationToken>((project, _) => updatedProjectArgument = project)
             .ReturnsAsync(persistedProject);
 
-        var result = await _projectService.Update(projectId, projectDto);
+        var result = await _projectService.Update(projectId, projectDto, authorId);
 
         Assert.That(updatedProjectArgument, Is.Not.Null);
         Assert.Multiple(() =>
@@ -376,16 +402,51 @@ public class ProjectServiceTest
             .ReturnsAsync((Project?)null);
 
         var exception = Assert.ThrowsAsync<ProjectNotFoundException>(
-            async () => await _projectService.Update(projectId, projectDto));
+            async () => await _projectService.Update(projectId, projectDto, authorId));
 
         Assert.That(exception!.Message, Is.EqualTo($"The project with id '{projectId}' was not found."));
+    }
+
+    [Test]
+    public void Update_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
+    {
+        var projectId = Guid.NewGuid();
+        var projectAuthorId = Guid.NewGuid();
+        var existingProject = CreateProject(
+            projectId,
+            "Original Title",
+            "Original Description",
+            new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+            1,
+            projectAuthorId,
+            false);
+
+        var projectDto = new UpdateProjectDTO
+        {
+            Title = "Updated Title",
+            Description = "Updated Description",
+            Version = 2,
+            IsInDevelopment = true
+        };
+
+        _projectRepositoryMock
+            .Setup(x => x.GetById(projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingProject);
+
+        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
+            async () => await _projectService.Update(projectId, projectDto, Guid.NewGuid()));
+
+        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
+        _projectRepositoryMock.Verify(
+            x => x.Update(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Test]
     public void Delete_ShouldThrowInvalidProjectIdException_WhenIdIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidProjectIdException>(
-            async () => await _projectService.Delete(Guid.Empty));
+            async () => await _projectService.Delete(Guid.Empty, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided project id is not valid."));
         _projectRepositoryMock.Verify(
@@ -406,9 +467,35 @@ public class ProjectServiceTest
             .ReturnsAsync((Project?)null);
 
         var exception = Assert.ThrowsAsync<ProjectNotFoundException>(
-            async () => await _projectService.Delete(projectId));
+            async () => await _projectService.Delete(projectId, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo($"The project with id '{projectId}' was not found."));
+        _projectRepositoryMock.Verify(
+            x => x.Delete(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void Delete_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
+    {
+        var projectId = Guid.NewGuid();
+        var project = CreateProject(
+            projectId,
+            "VetApp",
+            "Vet manager for schedule appointments.",
+            new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
+            1,
+            Guid.NewGuid(),
+            true);
+
+        _projectRepositoryMock
+            .Setup(x => x.GetById(projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
+
+        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
+            async () => await _projectService.Delete(projectId, Guid.NewGuid()));
+
+        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _projectRepositoryMock.Verify(
             x => x.Delete(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -435,7 +522,7 @@ public class ProjectServiceTest
             .Setup(x => x.Delete(project, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _projectService.Delete(projectId);
+        await _projectService.Delete(projectId, project.AuthorId);
 
         _projectRepositoryMock.Verify(
             x => x.Delete(project, It.IsAny<CancellationToken>()),

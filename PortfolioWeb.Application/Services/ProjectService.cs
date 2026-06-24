@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
 using PortfolioWeb.Application.Contract.Services;
@@ -43,12 +44,18 @@ public class ProjectService(
             .ToList();
     }
 
-    public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default)
+    public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (projectDto.AuthorId == Guid.Empty)
         {
             logger.ProjectCreationRejectedBecauseAuthorIdIsEmpty();
             throw new InvalidAuthorIdException();
+        }
+
+        if (currentAuthorId != projectDto.AuthorId)
+        {
+            logger.ProjectCreationRejectedBecauseResourceIsForbidden(currentAuthorId, projectDto.AuthorId);
+            throw new ForbiddenResourceAccessException();
         }
 
         logger.CreatingProject(projectDto.AuthorId, projectDto.Title, projectDto.Version);
@@ -69,7 +76,7 @@ public class ProjectService(
         return ProjectMapper.MapToDTO(createdProject);
     }
 
-    public async Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, CancellationToken cancellationToken = default)
+    public async Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -85,6 +92,12 @@ public class ProjectService(
         {
             logger.ProjectNotFoundDuringUpdate(id);
             throw new ProjectNotFoundException(id);
+        }
+
+        if (project.AuthorId != currentAuthorId)
+        {
+            logger.ProjectUpdateRejectedBecauseResourceIsForbidden(currentAuthorId, project.AuthorId, id);
+            throw new ForbiddenResourceAccessException();
         }
 
         project.Title = projectDto.Title;
@@ -105,7 +118,7 @@ public class ProjectService(
         return ProjectMapper.MapToDTO(updatedProject);
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -121,6 +134,12 @@ public class ProjectService(
         {
             logger.ProjectNotFoundDuringDeletion(id);
             throw new ProjectNotFoundException(id);
+        }
+
+        if (project.AuthorId != currentAuthorId)
+        {
+            logger.ProjectDeletionRejectedBecauseResourceIsForbidden(currentAuthorId, project.AuthorId, id);
+            throw new ForbiddenResourceAccessException();
         }
 
         await projectRepository.Delete(project, cancellationToken);

@@ -8,9 +8,9 @@ public interface IProjectService
 
     Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default);
 
-    Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default);
+    Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
 
-    Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, CancellationToken cancellationToken = default);
+    Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
 
-    Task Delete(Guid id, CancellationToken cancellationToken = default);
+    Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default);
 }

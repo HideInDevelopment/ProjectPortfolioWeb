@@ -1,10 +1,14 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
@@ -139,13 +143,15 @@ public class ProgramIntegrationTest
     {
         using var client = CreateClientWithProjectService(new ThrowingProjectService(
             new Exception("Project service should not be reached for invalid payloads.")));
+        var authorId = Guid.NewGuid();
+        AuthenticateClient(client, authorId);
         var payload = new
         {
             Title = new string('A', 201),
             Description = "Valid description",
             ReleaseDate = "2026-07-01T00:00:00+00:00",
             Version = 1,
-            AuthorId = Guid.NewGuid(),
+            AuthorId = authorId,
             IsInDevelopment = true
         };
 
@@ -165,6 +171,7 @@ public class ProgramIntegrationTest
     {
         using var client = CreateClientWithProjectService(new ThrowingProjectService(
             new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
         var payload = new
         {
             Title = string.Empty,
@@ -182,6 +189,55 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
         });
+    }
+
+    [Test]
+    public async Task CreateProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = factory.CreateClient();
+        var payload = new
+        {
+            Title = "PortfolioWeb",
+            Description = "Personal portfolio website.",
+            ReleaseDate = "2026-07-01T00:00:00+00:00",
+            Version = 1,
+            AuthorId = Guid.NewGuid(),
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(payload));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task UpdateProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.PutAsync(
+            $"/api/Projects/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Title = "Updated",
+                Description = "Updated description",
+                Version = 1,
+                IsInDevelopment = true
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task DeleteProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.DeleteAsync($"/api/Projects/{Guid.NewGuid()}");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -335,6 +391,38 @@ public class ProgramIntegrationTest
             "application/json");
     }
 
+    private static void AuthenticateClient(HttpClient client, Guid authorId)
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            CreateAccessToken(authorId));
+    }
+
+    private static string CreateAccessToken(Guid authorId)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Email, "manuel@portfolio.local"),
+            new("authorId", authorId.ToString()),
+            new(ClaimTypes.Role, "User")
+        };
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ThisIsATestSigningKeyWithEnoughLength123!")),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: "PortfolioWeb",
+            audience: "PortfolioWebClient",
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(60),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     private sealed class ThrowingAuthorService(Exception exception) : IAuthorService
     {
         public Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
@@ -358,13 +446,13 @@ public class ProgramIntegrationTest
         public Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<ProjectDTO> Create(CreateProjectDTO projectDto, CancellationToken cancellationToken = default) =>
+        public Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, CancellationToken cancellationToken = default) =>
+        public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task Delete(Guid id, CancellationToken cancellationToken = default) =>
+        public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
     }
 
