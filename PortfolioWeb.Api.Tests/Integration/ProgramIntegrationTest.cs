@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,6 +18,7 @@ using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
+using PortfolioWeb.Infrastructure.Persistence;
 
 namespace PortfolioWeb.Api.Tests.Integration;
 
@@ -231,6 +233,88 @@ public class ProgramIntegrationTest
     }
 
     [Test]
+    public async Task Login_And_WriteEndpoints_ShouldPersistThroughRealServicesAndRepositories()
+    {
+        using var client = factory.CreateClient();
+        var uniqueId = Guid.NewGuid().ToString("N");
+        var email = $"manuel.{uniqueId}@portfolio.local";
+        var authorName = $"Manuel {uniqueId}";
+
+        var seededUser = CreatePersistedUser(
+            email,
+            authorName,
+            isActive: true,
+            passwordHash: HashForTests("password"));
+
+        using (var seedScope = factory.Services.CreateScope())
+        {
+            var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+            await dbContext.Database.MigrateAsync();
+            dbContext.Users.Add(seededUser);
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var loginResponse = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = email,
+                Password = "password"
+            }));
+        var loginAuthResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(loginAuthResponse, Is.Not.Null);
+
+        AuthenticateClient(client, loginAuthResponse!.AccessToken);
+
+        using var updateAuthorResponse = await client.PutAsync(
+            $"/api/Authors/{seededUser.Author.Id}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+        var updatedAuthor = await updateAuthorResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+
+        using var createProjectResponse = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(new
+            {
+                Title = "PortfolioWeb",
+                Description = "Personal portfolio website.",
+                ReleaseDate = "2026-07-01T00:00:00+00:00",
+                Version = 1,
+                AuthorId = seededUser.Author.Id,
+                IsInDevelopment = true
+            }));
+        var createdProject = await createProjectResponse.Content.ReadFromJsonAsync<ProjectDTO>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updateAuthorResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(updatedAuthor, Is.Not.Null);
+            Assert.That(updatedAuthor!.Name, Is.EqualTo("Updated Manuel"));
+            Assert.That(createProjectResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            Assert.That(createdProject, Is.Not.Null);
+            Assert.That(createdProject!.AuthorId, Is.EqualTo(seededUser.Author.Id));
+            Assert.That(createdProject.Title, Is.EqualTo("PortfolioWeb"));
+        });
+
+        using var verificationScope = factory.Services.CreateScope();
+        var verificationDbContext = verificationScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+        var persistedAuthor = await verificationDbContext.Authors
+            .Include(author => author.Projects)
+            .SingleAsync(author => author.Id == seededUser.Author.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(persistedAuthor.Name, Is.EqualTo("Updated Manuel"));
+            Assert.That(persistedAuthor.Projects, Has.Count.EqualTo(1));
+            Assert.That(persistedAuthor.Projects[0].Title, Is.EqualTo("PortfolioWeb"));
+        });
+    }
+
+    [Test]
     public async Task Register_ShouldReturnConflict_WhenCreateFailsBecauseEmailWasInsertedConcurrently()
     {
         using var client = CreateClientWithUserRepository(
@@ -406,6 +490,78 @@ public class ProgramIntegrationTest
     }
 
     [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtIsExpired()
+    {
+        using var client = factory.CreateClient();
+        AuthenticateClient(client, CreateAccessToken(
+            authorId: Guid.NewGuid(),
+            expiresUtc: DateTime.UtcNow.AddMinutes(-5)));
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtSignatureIsInvalid()
+    {
+        using var client = factory.CreateClient();
+        AuthenticateClient(client, CreateAccessToken(
+            authorId: Guid.NewGuid(),
+            signingKey: "ThisIsAnotherTestSigningKeyWithEnoughLength456!"));
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtAudienceIsInvalid()
+    {
+        using var client = factory.CreateClient();
+        AuthenticateClient(client, CreateAccessToken(
+            authorId: Guid.NewGuid(),
+            audience: "AnotherAudience"));
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtIssuerIsInvalid()
+    {
+        using var client = factory.CreateClient();
+        AuthenticateClient(client, CreateAccessToken(
+            authorId: Guid.NewGuid(),
+            issuer: "AnotherIssuer"));
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated Manuel"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
     public async Task CreateProject_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
     {
         using var client = CreateClientWithProjectService(new ThrowingProjectService(
@@ -425,11 +581,15 @@ public class ProgramIntegrationTest
         using var response = await client.PostAsync(
             "/api/Projects",
             CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
 
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Title"));
+            Assert.That(problemDetails.Errors["Title"], Has.Some.Contains("between 1 and 200"));
         });
     }
 
@@ -450,11 +610,15 @@ public class ProgramIntegrationTest
         using var response = await client.PutAsync(
             $"/api/Projects/{Guid.NewGuid()}",
             CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
 
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Title"));
+            Assert.That(problemDetails.Errors["Title"], Is.Not.Empty);
         });
     }
 
@@ -573,11 +737,15 @@ public class ProgramIntegrationTest
                 Password = "password",
                 AuthorName = "Manuel"
             }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
 
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Email"));
+            Assert.That(problemDetails.Errors["Email"], Is.Not.Empty);
         });
     }
 
@@ -594,11 +762,15 @@ public class ProgramIntegrationTest
                 Email = "manuel@portfolio.local",
                 Password = ""
             }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
 
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Password"));
+            Assert.That(problemDetails.Errors["Password"], Is.Not.Empty);
         });
     }
 
@@ -722,26 +894,38 @@ public class ProgramIntegrationTest
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private static string CreateAccessToken(Guid authorId)
+    private static string CreateAccessToken(
+        Guid authorId,
+        string email = "manuel@portfolio.local",
+        string issuer = "PortfolioWeb",
+        string audience = "PortfolioWebClient",
+        string signingKey = "ThisIsATestSigningKeyWithEnoughLength123!",
+        DateTime? expiresUtc = null)
     {
+        var now = DateTime.UtcNow;
+        var expiration = expiresUtc ?? now.AddMinutes(60);
+        var notBefore = expiration <= now
+            ? expiration.AddMinutes(-10)
+            : now;
+
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Email, "manuel@portfolio.local"),
+            new(JwtRegisteredClaimNames.Email, email),
             new("authorId", authorId.ToString()),
             new(ClaimTypes.Role, "User")
         };
 
         var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ThisIsATestSigningKeyWithEnoughLength123!")),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: "PortfolioWeb",
-            audience: "PortfolioWebClient",
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddMinutes(60),
+            notBefore: notBefore,
+            expires: expiration,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -938,11 +1122,16 @@ public class ProgramIntegrationTest
             throw new NotImplementedException();
     }
 
-    private sealed class ProblemDetailsResponse
+    private class ProblemDetailsResponse
     {
         public int? Status { get; set; }
 
         public string Title { get; set; } = string.Empty;
+    }
+
+    private sealed class ValidationProblemDetailsResponse : ProblemDetailsResponse
+    {
+        public Dictionary<string, string[]> Errors { get; set; } = [];
     }
 
     private static IEnumerable<TestCaseData> AuthorExceptionMappings()
@@ -1005,13 +1194,17 @@ public class ProgramIntegrationTest
             "Referenced author not found");
     }
 
-    private static User CreatePersistedUser(string email, string authorName, bool isActive = true)
+    private static User CreatePersistedUser(
+        string email,
+        string authorName,
+        bool isActive = true,
+        string? passwordHash = null)
     {
         var userId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
         var user = new User(
             email,
-            "hash",
+            passwordHash ?? HashForTests("password"),
             new DateTimeOffset(2026, 06, 24, 0, 0, 0, TimeSpan.Zero),
             UserRole.User,
             isActive)
@@ -1029,5 +1222,18 @@ public class ProgramIntegrationTest
         user.Author = author;
 
         return user;
+    }
+
+    private static string HashForTests(string password)
+    {
+        var salt = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+        var hash = Convert.ToBase64String(System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            Convert.FromBase64String(salt),
+            100_000,
+            System.Security.Cryptography.HashAlgorithmName.SHA256,
+            32));
+
+        return $"100000.{salt}.{hash}";
     }
 }
