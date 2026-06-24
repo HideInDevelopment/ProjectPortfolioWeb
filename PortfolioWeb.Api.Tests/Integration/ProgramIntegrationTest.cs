@@ -184,6 +184,31 @@ public class ProgramIntegrationTest
         });
     }
 
+    [Test]
+    public async Task UpdateAuthor_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.PutAsync(
+            $"/api/Authors/{Guid.NewGuid()}",
+            CreateJsonContent(new
+            {
+                Name = "Updated"
+            }));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task DeleteAuthor_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.DeleteAsync($"/api/Authors/{Guid.NewGuid()}");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
     [TestCaseSource(nameof(AuthExceptionMappings))]
     public async Task ExceptionHandler_ShouldReturnExpectedProblemDetails_ForAuthExceptions(
         Exception exception,
@@ -318,13 +343,10 @@ public class ProgramIntegrationTest
         public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Create(PersistAuthorDTO authorDto, CancellationToken cancellationToken = default) =>
+        public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default) =>
-            throw new NotImplementedException();
-
-        public Task Delete(Guid id, CancellationToken cancellationToken = default) =>
+        public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
     }
 
@@ -368,10 +390,6 @@ public class ProgramIntegrationTest
             new InvalidAuthorIdException(),
             HttpStatusCode.BadRequest,
             "Invalid author id");
-        yield return new TestCaseData(
-            new AuthorCreationRequiresUserException(),
-            HttpStatusCode.BadRequest,
-            "Author creation requires user registration");
         yield return new TestCaseData(
             new AuthorNotFoundException(Guid.NewGuid()),
             HttpStatusCode.NotFound,

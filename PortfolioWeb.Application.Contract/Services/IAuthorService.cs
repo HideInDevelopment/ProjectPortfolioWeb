@@ -8,9 +8,7 @@ public interface IAuthorService
 
     Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default);
 
-    Task<AuthorDTO> Create(PersistAuthorDTO authorDto, CancellationToken cancellationToken = default);
+    Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
 
-    Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default);
-
-    Task Delete(Guid id, CancellationToken cancellationToken = default);
+    Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default);
 }

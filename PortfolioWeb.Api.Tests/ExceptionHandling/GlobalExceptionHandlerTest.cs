@@ -19,14 +19,14 @@ public class GlobalExceptionHandlerTest
             "Invalid auth request",
             LogLevel.Warning);
         yield return new TestCaseData(
+            new ForbiddenResourceAccessException(),
+            StatusCodes.Status403Forbidden,
+            "Forbidden resource access",
+            LogLevel.Warning);
+        yield return new TestCaseData(
             new InvalidAuthorIdException(),
             StatusCodes.Status400BadRequest,
             "Invalid author id",
-            LogLevel.Warning);
-        yield return new TestCaseData(
-            new AuthorCreationRequiresUserException(),
-            StatusCodes.Status400BadRequest,
-            "Author creation requires user registration",
             LogLevel.Warning);
         yield return new TestCaseData(
             new DuplicateEmailException("manuel@portfolio.local"),

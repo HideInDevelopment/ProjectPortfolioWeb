@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Services;
 using PortfolioWeb.Core.Contracts.Repositories;
@@ -98,23 +99,6 @@ public class AuthorServiceTest
     }
 
     [Test]
-    public void Create_ShouldThrowAuthorCreationRequiresUserException()
-    {
-        var authorDto = new PersistAuthorDTO
-        {
-            Name = "Manuel"
-        };
-
-        var exception = Assert.ThrowsAsync<AuthorCreationRequiresUserException>(
-            async () => await _authorService.Create(authorDto));
-
-        Assert.That(exception!.Message, Is.EqualTo("Authors must be created through user registration."));
-        _authorRepositoryMock.Verify(
-            x => x.Create(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Test]
     public async Task Update_ShouldMapPersistAuthorDtoAndReturnUpdatedAuthorDto_WhenAuthorExists()
     {
         var authorId = Guid.NewGuid();
@@ -131,7 +115,7 @@ public class AuthorServiceTest
             .Callback<Author, CancellationToken>((author, _) => updatedAuthorArgument = author)
             .ReturnsAsync(persistedAuthor);
 
-        var result = await _authorService.Update(authorId, authorDto);
+        var result = await _authorService.Update(authorId, authorDto, authorId);
 
         Assert.That(updatedAuthorArgument, Is.Not.Null);
         Assert.Multiple(() =>
@@ -152,9 +136,26 @@ public class AuthorServiceTest
         };
 
         var exception = Assert.ThrowsAsync<InvalidAuthorIdException>(
-            async () => await _authorService.Update(Guid.Empty, authorDto));
+            async () => await _authorService.Update(Guid.Empty, authorDto, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided author id is not valid."));
+        _authorRepositoryMock.Verify(
+            x => x.Update(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void Update_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
+    {
+        var authorDto = new PersistAuthorDTO
+        {
+            Name = "Updated Name"
+        };
+
+        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
+            async () => await _authorService.Update(Guid.NewGuid(), authorDto, Guid.NewGuid()));
+
+        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _authorRepositoryMock.Verify(
             x => x.Update(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -174,7 +175,7 @@ public class AuthorServiceTest
             .ReturnsAsync((Author?)null);
 
         var exception = Assert.ThrowsAsync<AuthorNotFoundException>(
-            async () => await _authorService.Update(authorId, authorDto));
+            async () => await _authorService.Update(authorId, authorDto, authorId));
 
         Assert.That(exception!.Message, Is.EqualTo($"The author with id '{authorId}' was not found."));
     }
@@ -183,9 +184,24 @@ public class AuthorServiceTest
     public void Delete_ShouldThrowInvalidAuthorIdException_WhenIdIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthorIdException>(
-            async () => await _authorService.Delete(Guid.Empty));
+            async () => await _authorService.Delete(Guid.Empty, Guid.NewGuid()));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided author id is not valid."));
+        _authorRepositoryMock.Verify(
+            x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _authorRepositoryMock.Verify(
+            x => x.Delete(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void Delete_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
+    {
+        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
+            async () => await _authorService.Delete(Guid.NewGuid(), Guid.NewGuid()));
+
+        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _authorRepositoryMock.Verify(
             x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -204,7 +220,7 @@ public class AuthorServiceTest
             .ReturnsAsync((Author?)null);
 
         var exception = Assert.ThrowsAsync<AuthorNotFoundException>(
-            async () => await _authorService.Delete(authorId));
+            async () => await _authorService.Delete(authorId, authorId));
 
         Assert.That(exception!.Message, Is.EqualTo($"The author with id '{authorId}' was not found."));
         _authorRepositoryMock.Verify(
@@ -226,7 +242,7 @@ public class AuthorServiceTest
             .Setup(x => x.Delete(author, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _authorService.Delete(authorId);
+        await _authorService.Delete(authorId, authorId);
 
         _authorRepositoryMock.Verify(
             x => x.Delete(author, It.IsAny<CancellationToken>()),

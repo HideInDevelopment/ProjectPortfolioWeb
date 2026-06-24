@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Services;
+using PortfolioWeb.Api.Security;
 
 namespace PortfolioWeb.Api.Controllers;
  
@@ -16,26 +18,30 @@ public class AuthorsController(IAuthorService authorService) : ControllerBase
     public async Task<ActionResult<AuthorDTO>> GetById(Guid id, CancellationToken cancellationToken) =>
         Ok(await authorService.GetById(id, cancellationToken));
 
-    [HttpPost]
-    public async Task<ActionResult<AuthorDTO>> Create([FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
-    {
-        var createdAuthor = await authorService.Create(authorDto, cancellationToken);
-
-        return CreatedAtAction(nameof(GetById), new { id = createdAuthor.Id }, createdAuthor);
-    }
-
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AuthorDTO>> Update(Guid id, [FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
     {
-        var updatedAuthor = await authorService.Update(id, authorDto, cancellationToken);
+        if (!User.TryGetAuthorId(out var currentAuthorId))
+        {
+            return Unauthorized();
+        }
+
+        var updatedAuthor = await authorService.Update(id, authorDto, currentAuthorId, cancellationToken);
 
         return Ok(updatedAuthor);
     }
 
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        await authorService.Delete(id, cancellationToken);
+        if (!User.TryGetAuthorId(out var currentAuthorId))
+        {
+            return Unauthorized();
+        }
+
+        await authorService.Delete(id, currentAuthorId, cancellationToken);
 
         return NoContent();
     }

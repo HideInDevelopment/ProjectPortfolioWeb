@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Logging;
@@ -40,19 +41,18 @@ public class AuthorService(
             .ToList();
     }
 
-    public async Task<AuthorDTO> Create(PersistAuthorDTO authorDto, CancellationToken cancellationToken = default)
-    {
-        logger.CreatingAuthor(authorDto.Name);
-        logger.AuthorCreationRejectedBecauseItRequiresUserRegistration();
-        throw new AuthorCreationRequiresUserException();
-    }
-
-    public async Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, CancellationToken cancellationToken = default)
+    public async Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
             logger.AuthorUpdateRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
+        }
+
+        if (currentAuthorId != id)
+        {
+            logger.AuthorUpdateRejectedBecauseResourceIsForbidden(currentAuthorId, id);
+            throw new ForbiddenResourceAccessException();
         }
 
         logger.UpdatingAuthor(id, authorDto.Name);
@@ -73,12 +73,18 @@ public class AuthorService(
         return AuthorMapper.MapToDTO(updatedAuthor);
     }
 
-    public async Task Delete(Guid id, CancellationToken cancellationToken = default)
+    public async Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
             logger.AuthorDeletionRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
+        }
+
+        if (currentAuthorId != id)
+        {
+            logger.AuthorDeletionRejectedBecauseResourceIsForbidden(currentAuthorId, id);
+            throw new ForbiddenResourceAccessException();
         }
 
         logger.DeletingAuthor(id);

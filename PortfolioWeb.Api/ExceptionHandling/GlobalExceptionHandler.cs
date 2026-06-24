@@ -51,8 +51,8 @@ public class GlobalExceptionHandler(
         return exception switch
         {
             InvalidAuthRequestException => (StatusCodes.Status400BadRequest, "Invalid auth request"),
+            ForbiddenResourceAccessException => (StatusCodes.Status403Forbidden, "Forbidden resource access"),
             InvalidAuthorIdException => (StatusCodes.Status400BadRequest, "Invalid author id"),
-            AuthorCreationRequiresUserException => (StatusCodes.Status400BadRequest, "Author creation requires user registration"),
             DuplicateEmailException => (StatusCodes.Status409Conflict, "Duplicate email"),
             InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
             InactiveUserException => (StatusCodes.Status403Forbidden, "Inactive user"),
