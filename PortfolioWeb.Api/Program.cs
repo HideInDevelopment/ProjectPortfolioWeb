@@ -113,13 +113,18 @@ app.UseAuthorization();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
-    var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+    var applyMigrationsOnStartup = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", app.Environment.IsDevelopment());
 
-    if (pendingMigrations.Any())
+    if (applyMigrationsOnStartup)
     {
-        await dbContext.Database.MigrateAsync();
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+
+        if (pendingMigrations.Any())
+        {
+            await dbContext.Database.MigrateAsync();
+        }
     }
 }
 

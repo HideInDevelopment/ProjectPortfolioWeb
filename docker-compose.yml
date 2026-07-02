@@ -24,6 +24,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PortfolioWebDatabase: Host=postgres;Port=5432;Database=portfolio_web;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Database__ApplyMigrationsOnStartup: true
       Authentication__Issuer: ${AUTH_ISSUER}
       Authentication__Audience: ${AUTH_AUDIENCE}
       Authentication__SigningKey: ${AUTH_SIGNING_KEY}

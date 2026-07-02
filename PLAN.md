@@ -91,15 +91,19 @@ Build a solid backend for PortfolioWeb that can:
 - [x] Simple `Role` with initial value `User`
 
 ### 3. Exit criteria for deployment
-- [ ] Define a minimum reproducible deployment flow
-- [ ] Verify that the API container works with clean external configuration
-- [ ] Leave the migration strategy resolved for deployed environments
-- [ ] Add basic remote automation
-  - CI for build + test at minimum
+- [~] Deployment closure in progress
+  - [x] API and PostgreSQL are dockerized
+  - [x] local secret shape is defined through `.env.example`
+  - [x] startup fails fast when critical configuration is missing or weak
+  - [x] local Docker flow is documented
+  - [x] basic remote automation added
+    - CI for build + test at minimum
+  - [x] migration strategy for deployed environments decided
+  - [ ] define a minimum reproducible deployment flow for a fresh environment
+  - [ ] verify explicitly that the API container boots correctly with clean external configuration only
 
 ## Recommended execution order
-1. Apply baseline security linked to the authentication/authorization already implemented
-2. Close deployment criteria
+1. Close deployment criteria
 
 ## Out of scope for now
 - Frontend

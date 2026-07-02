@@ -36,6 +36,23 @@ Security note:
 - `.env` is local and gitignored.
 - Docker secrets such as the PostgreSQL password and JWT signing key should stay there, not in tracked files.
 - OpenAPI and Scalar are exposed by default in local development and testing. In other environments they should stay disabled unless explicitly enabled through configuration.
+- Automatic EF Core migration on startup is intended for local development only.
+
+## Deployment Notes
+For deployed environments, keep database schema changes as an explicit release step instead of letting the API migrate on startup.
+
+Recommended policy:
+
+- local development and local Docker: `Database:ApplyMigrationsOnStartup=true`
+- deployed environments: `Database:ApplyMigrationsOnStartup=false`
+
+Before starting the API in a deployed environment, apply migrations from a build or release step that has the .NET SDK and EF Core tooling available:
+
+```powershell
+dotnet ef database update --project PortfolioWeb.Infrastructure --startup-project PortfolioWeb.Api
+```
+
+After that, start the API with external configuration only.
 
 To stop the containers:
 
@@ -102,5 +119,12 @@ Recommended approach:
 - Use the local `pre-push` hook as a fast safety net.
 - Keep CI in the remote repository as the final source of truth.
 - Do not rely only on the local hook, because it can be skipped or missing on other machines.
+
+## Remote Automation
+The repository includes basic remote automation through GitHub Actions:
+
+- restore
+- build
+- test
 
 # WIP

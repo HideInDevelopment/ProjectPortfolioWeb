@@ -57,10 +57,8 @@ public class ProgramIntegrationTest
     }
 
     [Test]
-    public async Task OpenApiEndpoint_ShouldBeUnavailableInProductionByDefault()
+    public async Task OpenApiEndpoint_ShouldBeUnavailableInProductionByDefault_WhenStartupMigrationsAreDisabled()
     {
-        await EnsurePostgreSqlAvailableOrIgnoreAsync();
-
         using var client = _factory.WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Production");
@@ -68,6 +66,8 @@ public class ProgramIntegrationTest
                 {
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        ["ConnectionStrings:PortfolioWebDatabase"] = "Host=invalid-host;Port=5432;Database=portfolio_web_prod;Username=postgres;Password=postgres",
+                        ["Database:ApplyMigrationsOnStartup"] = "false",
                         ["Features:ExposeApiDocs"] = "false"
                     });
                 });
@@ -1841,4 +1841,3 @@ public class ProgramIntegrationTest
         }
     }
 }
-
