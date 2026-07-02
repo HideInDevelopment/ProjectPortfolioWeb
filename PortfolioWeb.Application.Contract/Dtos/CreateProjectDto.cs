@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using PortfolioWeb.Application.Contract.Serialization;
 
-namespace PortfolioWeb.Application.Contract.DTOs;
+namespace PortfolioWeb.Application.Contract.Dtos;
 
-public class CreateProjectDTO
+public class CreateProjectDto : IValidatableObject
 {
     [Required(ErrorMessage = "Title is required.")]
     [StringLength(200, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 200 characters.")]
@@ -17,7 +17,19 @@ public class CreateProjectDTO
     [JsonConverter(typeof(FlexibleDateTimeOffsetJsonConverter))]
     public DateTimeOffset ReleaseDate { get; set; }
 
+    [Range(0, int.MaxValue, ErrorMessage = "Version must be zero or greater.")]
     public int Version { get; set; }
 
     public bool IsInDevelopment { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ReleaseDate == default)
+        {
+            yield return new ValidationResult(
+                "Release date is required.",
+                [nameof(ReleaseDate)]);
+        }
+    }
 }
+

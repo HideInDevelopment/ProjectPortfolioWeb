@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
@@ -181,7 +181,7 @@ public class ProgramIntegrationTest
                 Password = "password",
                 AuthorName = "Manuel"
             }));
-        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -194,7 +194,7 @@ public class ProgramIntegrationTest
             {
                 Name = "Updated Manuel"
             }));
-        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDto>();
         var createdUser = userRepository.CreatedUser;
         if (author is null)
         {
@@ -242,7 +242,7 @@ public class ProgramIntegrationTest
                 Email = "manuel@portfolio.local",
                 Password = "password"
             }));
-        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -255,7 +255,7 @@ public class ProgramIntegrationTest
             {
                 Name = "Updated After Login"
             }));
-        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+        var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDto>();
         var createdUser = userRepository.CreatedUser;
         if (author is null)
         {
@@ -309,7 +309,7 @@ public class ProgramIntegrationTest
                 Email = email,
                 Password = "password"
             }));
-        var loginAuthResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var loginAuthResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(loginAuthResponse, Is.Not.Null);
@@ -322,7 +322,7 @@ public class ProgramIntegrationTest
             {
                 Name = "Updated Manuel"
             }));
-        var updatedAuthor = await updateAuthorResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+        var updatedAuthor = await updateAuthorResponse.Content.ReadFromJsonAsync<AuthorDto>();
 
         using var createProjectResponse = await client.PostAsync(
             "/api/Projects",
@@ -334,7 +334,7 @@ public class ProgramIntegrationTest
                 Version = 1,
                 IsInDevelopment = true
             }));
-        var createdProject = await createProjectResponse.Content.ReadFromJsonAsync<ProjectDTO>();
+        var createdProject = await createProjectResponse.Content.ReadFromJsonAsync<ProjectDto>();
 
         Assert.Multiple(() =>
         {
@@ -502,7 +502,7 @@ public class ProgramIntegrationTest
                 Email = firstUser.Email,
                 Password = "password"
             }));
-        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -563,7 +563,7 @@ public class ProgramIntegrationTest
                 Email = firstUser.Email,
                 Password = "password"
             }));
-        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -621,7 +621,7 @@ public class ProgramIntegrationTest
                 Email = email,
                 Password = "password"
             }));
-        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -638,7 +638,7 @@ public class ProgramIntegrationTest
                 Version = 1,
                 IsInDevelopment = true
             }));
-        var createdProject = await createResponse.Content.ReadFromJsonAsync<ProjectDTO>();
+        var createdProject = await createResponse.Content.ReadFromJsonAsync<ProjectDto>();
 
         using var deleteProjectResponse = await client.DeleteAsync($"/api/Projects/{createdProject!.Id}");
         using var deleteAuthorResponse = await client.DeleteAsync($"/api/Authors/{seededUser.Author.Id}");
@@ -688,7 +688,7 @@ public class ProgramIntegrationTest
                 Password = "password",
                 AuthorName = "Manuel"
             }));
-        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
@@ -812,6 +812,10 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
+            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(problemDetails.Detail, Is.EqualTo("One or more validation errors occurred."));
+            Assert.That(problemDetails.Instance, Is.EqualTo("/api/Projects"));
             Assert.That(problemDetails!.Errors, Contains.Key("Title"));
             Assert.That(problemDetails.Errors["Title"], Has.Some.Contains("between 1 and 200"));
         });
@@ -841,6 +845,7 @@ public class ProgramIntegrationTest
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails!.Errors, Contains.Key("Description"));
             Assert.That(problemDetails.Errors["Description"], Is.Not.Empty);
         });
@@ -870,8 +875,66 @@ public class ProgramIntegrationTest
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails!.Errors, Contains.Key("$.ReleaseDate"));
             Assert.That(problemDetails.Errors["$.ReleaseDate"], Has.Some.Contains("not a valid date"));
+        });
+    }
+
+    [Test]
+    public async Task CreateProject_ShouldReturnBadRequest_WhenReleaseDateIsMissing()
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+        var payload = new
+        {
+            Title = "Valid title",
+            Description = "Valid description",
+            Version = 1,
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("ReleaseDate"));
+            Assert.That(problemDetails.Errors["ReleaseDate"], Has.Some.Contains("Release date is required."));
+        });
+    }
+
+    [Test]
+    public async Task CreateProject_ShouldReturnBadRequest_WhenVersionIsNegative()
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+        var payload = new
+        {
+            Title = "Valid title",
+            Description = "Valid description",
+            ReleaseDate = "2026-07-01T00:00:00+00:00",
+            Version = -1,
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Version"));
+            Assert.That(problemDetails.Errors["Version"], Has.Some.Contains("zero or greater"));
         });
     }
 
@@ -899,8 +962,37 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails!.Errors, Contains.Key("Title"));
             Assert.That(problemDetails.Errors["Title"], Is.Not.Empty);
+        });
+    }
+
+    [Test]
+    public async Task UpdateProject_ShouldReturnBadRequest_WhenVersionIsNegative()
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+        var payload = new
+        {
+            Title = "Valid title",
+            Description = "Valid description",
+            Version = -1,
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PutAsync(
+            $"/api/Projects/{Guid.NewGuid()}",
+            CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Version"));
+            Assert.That(problemDetails.Errors["Version"], Has.Some.Contains("zero or greater"));
         });
     }
 
@@ -1025,8 +1117,60 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
+            Assert.That(problemDetails.Instance, Is.EqualTo("/api/auth/register"));
             Assert.That(problemDetails!.Errors, Contains.Key("Email"));
             Assert.That(problemDetails.Errors["Email"], Is.Not.Empty);
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnBadRequest_WhenEmailFormatIsInvalid()
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(
+            new Exception("Auth service should not be reached for invalid payloads.")));
+
+        using var response = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "not-an-email",
+                Password = "password",
+                AuthorName = "Manuel"
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Email"));
+            Assert.That(problemDetails.Errors["Email"], Has.Some.Contains("valid email address"));
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnBadRequest_WhenAuthorNameExceedsMaxLength()
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(
+            new Exception("Auth service should not be reached for invalid payloads.")));
+
+        using var response = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = "manuel@portfolio.local",
+                Password = "password",
+                AuthorName = new string('A', 201)
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("AuthorName"));
+            Assert.That(problemDetails.Errors["AuthorName"], Has.Some.Contains("between 1 and 200"));
         });
     }
 
@@ -1049,6 +1193,7 @@ public class ProgramIntegrationTest
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails!.Errors, Contains.Key("Name"));
             Assert.That(problemDetails.Errors["Name"], Is.Not.Empty);
         });
@@ -1074,8 +1219,33 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails!.Errors, Contains.Key("Password"));
             Assert.That(problemDetails.Errors["Password"], Is.Not.Empty);
+        });
+    }
+
+    [Test]
+    public async Task Login_ShouldReturnBadRequest_WhenEmailFormatIsInvalid()
+    {
+        using var client = CreateClientWithAuthService(new ThrowingAuthService(
+            new Exception("Auth service should not be reached for invalid payloads.")));
+
+        using var response = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = "not-an-email",
+                Password = "password"
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Email"));
+            Assert.That(problemDetails.Errors["Email"], Has.Some.Contains("valid email address"));
         });
     }
 
@@ -1262,13 +1432,13 @@ public class ProgramIntegrationTest
 
     private sealed class ThrowingAuthorService(Exception exception) : IAuthorService
     {
-        public Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
+        public Task<AuthorDto> GetById(Guid id, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
+        public Task<List<AuthorDto>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+        public Task<AuthorDto> Update(PersistAuthorDto authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
         public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
@@ -1277,16 +1447,16 @@ public class ProgramIntegrationTest
 
     private sealed class ThrowingProjectService(Exception exception) : IProjectService
     {
-        public Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
+        public Task<ProjectDto> GetById(Guid id, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default) =>
+        public Task<List<ProjectDto>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+        public Task<ProjectDto> Create(CreateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+        public Task<ProjectDto> Update(Guid id, UpdateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw exception;
 
         public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
@@ -1295,10 +1465,10 @@ public class ProgramIntegrationTest
 
     private sealed class ThrowingAuthService(Exception exception) : IAuthService
     {
-        public Task<AuthResponseDTO> Register(RegisterUserDTO registerUserDto, CancellationToken cancellationToken = default) =>
+        public Task<AuthResponseDto> Register(RegisterUserDto registerUserDto, CancellationToken cancellationToken = default) =>
             throw exception;
 
-        public Task<AuthResponseDTO> Login(LoginUserDTO loginUserDto, CancellationToken cancellationToken = default) =>
+        public Task<AuthResponseDto> Login(LoginUserDto loginUserDto, CancellationToken cancellationToken = default) =>
             throw exception;
 
         public Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default) =>
@@ -1411,15 +1581,15 @@ public class ProgramIntegrationTest
 
     private sealed class OwnershipProbeAuthorService : IAuthorService
     {
-        public Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
+        public Task<AuthorDto> GetById(Guid id, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
+        public Task<List<AuthorDto>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+        public Task<AuthorDto> Update(PersistAuthorDto authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new AuthorDTO
+            return Task.FromResult(new AuthorDto
             {
                 Id = currentAuthorId,
                 Name = authorDto.Name
@@ -1435,6 +1605,10 @@ public class ProgramIntegrationTest
         public int? Status { get; set; }
 
         public string Title { get; set; } = string.Empty;
+
+        public string Detail { get; set; } = string.Empty;
+
+        public string Instance { get; set; } = string.Empty;
     }
 
     private sealed class ValidationProblemDetailsResponse : ProblemDetailsResponse
@@ -1576,3 +1750,4 @@ public class ProgramIntegrationTest
         }
     }
 }
+

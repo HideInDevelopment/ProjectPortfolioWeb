@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Application.Logging;
@@ -16,7 +16,7 @@ public class AuthService(
     ILogger<AuthService> logger,
     IConfiguration configuration) : IAuthService
 {
-    public async Task<AuthResponseDTO> Register(RegisterUserDTO registerUserDto, CancellationToken cancellationToken = default)
+    public async Task<AuthResponseDto> Register(RegisterUserDto registerUserDto, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeRequiredEmail(registerUserDto.Email, logger, true);
         var password = NormalizeRequiredPassword(registerUserDto.Password, logger, true);
@@ -69,7 +69,7 @@ public class AuthService(
         return JwtTokenFactory.Create(createdUser, configuration);
     }
 
-    public async Task<AuthResponseDTO> Login(LoginUserDTO loginUserDto, CancellationToken cancellationToken = default)
+    public async Task<AuthResponseDto> Login(LoginUserDto loginUserDto, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeRequiredEmail(loginUserDto.Email, logger, false);
         var password = NormalizeRequiredPassword(loginUserDto.Password, logger, false);
@@ -171,3 +171,4 @@ public class AuthService(
         return authorName.Trim();
     }
 }
+

@@ -1,12 +1,13 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 
 namespace PortfolioWeb.Application.Contract.Services;
 
 public interface IAuthService
 {
-    Task<AuthResponseDTO> Register(RegisterUserDTO registerUserDto, CancellationToken cancellationToken = default);
+    Task<AuthResponseDto> Register(RegisterUserDto registerUserDto, CancellationToken cancellationToken = default);
 
-    Task<AuthResponseDTO> Login(LoginUserDTO loginUserDto, CancellationToken cancellationToken = default);
+    Task<AuthResponseDto> Login(LoginUserDto loginUserDto, CancellationToken cancellationToken = default);
 
     Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default);
 }
+

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
@@ -132,7 +132,7 @@ public class ProjectServiceTest
     [Test]
     public void Create_ShouldThrowInvalidAuthorIdException_WhenCurrentAuthorIdIsEmpty()
     {
-        var projectDto = new CreateProjectDTO
+        var projectDto = new CreateProjectDto
         {
             Title = "VetApp",
             Description = "Vet manager for schedule appointments.",
@@ -157,7 +157,7 @@ public class ProjectServiceTest
     public void Create_ShouldThrowReferencedAuthorNotFoundException_WhenAuthorDoesNotExist()
     {
         var authorId = Guid.NewGuid();
-        var projectDto = new CreateProjectDTO
+        var projectDto = new CreateProjectDto
         {
             Title = "VetApp",
             Description = "Vet manager for schedule appointments.",
@@ -184,7 +184,7 @@ public class ProjectServiceTest
     {
         var authorId = Guid.NewGuid();
         var releaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero);
-        var projectDto = new CreateProjectDTO
+        var projectDto = new CreateProjectDto
         {
             Title = "VetApp",
             Description = "Vet manager for schedule appointments.",
@@ -237,7 +237,7 @@ public class ProjectServiceTest
     [Test]
     public void Update_ShouldThrowInvalidProjectIdException_WhenIdIsEmpty()
     {
-        var projectDto = new UpdateProjectDTO
+        var projectDto = new UpdateProjectDto
         {
             Title = "Updated Title",
             Description = "Updated Description",
@@ -261,7 +261,7 @@ public class ProjectServiceTest
     public void Update_ShouldThrowProjectNotFoundException_WhenProjectDoesNotExistDuringRetrieval()
     {
         var projectId = Guid.NewGuid();
-        var projectDto = new UpdateProjectDTO
+        var projectDto = new UpdateProjectDto
         {
             Title = "Updated Title",
             Description = "Updated Description",
@@ -297,7 +297,7 @@ public class ProjectServiceTest
             authorId,
             false);
 
-        var projectDto = new UpdateProjectDTO
+        var projectDto = new UpdateProjectDto
         {
             Title = "Updated Title",
             Description = "Updated Description",
@@ -357,7 +357,7 @@ public class ProjectServiceTest
             authorId,
             false);
 
-        var projectDto = new UpdateProjectDTO
+        var projectDto = new UpdateProjectDto
         {
             Title = "Updated Title",
             Description = "Updated Description",
@@ -393,7 +393,7 @@ public class ProjectServiceTest
             projectAuthorId,
             false);
 
-        var projectDto = new UpdateProjectDTO
+        var projectDto = new UpdateProjectDto
         {
             Title = "Updated Title",
             Description = "Updated Description",
@@ -522,3 +522,4 @@ public class ProjectServiceTest
         };
     }
 }
+

@@ -1,16 +1,17 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 
 namespace PortfolioWeb.Application.Contract.Services;
 
 public interface IProjectService
 {
-    Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default);
+    Task<ProjectDto> GetById(Guid id, CancellationToken cancellationToken = default);
 
-    Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default);
+    Task<List<ProjectDto>> GetAll(CancellationToken cancellationToken = default);
 
-    Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
+    Task<ProjectDto> Create(CreateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
 
-    Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
+    Task<ProjectDto> Update(Guid id, UpdateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default);
 
     Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default);
 }
+

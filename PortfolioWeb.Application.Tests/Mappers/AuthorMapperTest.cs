@@ -1,4 +1,4 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Mappers;
 using PortfolioWeb.Domain.Entities;
 
@@ -7,7 +7,7 @@ namespace PortfolioWeb.Application.Tests.Mappers;
 public class AuthorMapperTest
 {
     [Test]
-    public void MapToDTO_ShouldMapAuthorAndProjectsCorrectly()
+    public void MapToDto_ShouldMapAuthorAndProjectsCorrectly()
     {
         var authorId = Guid.NewGuid();
         var author = new Author("Manuel")
@@ -28,7 +28,7 @@ public class AuthorMapperTest
 
         author.AddProject(project);
 
-        var result = AuthorMapper.MapToDTO(author);
+        var result = AuthorMapper.MapToDto(author);
 
         Assert.Multiple(() =>
         {
@@ -48,7 +48,7 @@ public class AuthorMapperTest
     [Test]
     public void MapToEntity_ShouldMapPersistAuthorDtoCorrectly()
     {
-        var authorDto = new PersistAuthorDTO
+        var authorDto = new PersistAuthorDto
         {
             Name = "Manuel"
         };
@@ -63,3 +63,4 @@ public class AuthorMapperTest
         });
     }
 }
+

@@ -3,14 +3,14 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Domain.Entities;
 
 namespace PortfolioWeb.Application.Security;
 
 internal static class JwtTokenFactory
 {
-    public static AuthResponseDTO Create(User user, IConfiguration configuration)
+    public static AuthResponseDto Create(User user, IConfiguration configuration)
     {
         var issuer = configuration["Authentication:Issuer"] ?? throw new InvalidOperationException("Authentication issuer is not configured.");
         var audience = configuration["Authentication:Audience"] ?? throw new InvalidOperationException("Authentication audience is not configured.");
@@ -40,10 +40,11 @@ internal static class JwtTokenFactory
             expires: expiresAt.UtcDateTime,
             signingCredentials: credentials);
 
-        return new AuthResponseDTO
+        return new AuthResponseDto
         {
             AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
             ExpiresAt = expiresAt
         };
     }
 }
+

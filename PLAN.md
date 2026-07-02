@@ -34,10 +34,14 @@ Construir un backend solido para PortfolioWeb que pueda:
   - excepciones de aplicacion
   - excepciones de infraestructura
   - traduccion HTTP centralizada en `GlobalExceptionHandler`
+- [x] Endurecimiento final de la API:
+  - validacion explicita de DTOs de entrada en el borde HTTP
+  - respuestas de validacion homogeneas con `ValidationProblemDetails`
+  - validaciones previas a persistencia para longitudes, formato de email, `Version` y `ReleaseDate`
+  - contratos de error mas estables para consumo desde frontend
 - [x] Logging estructurado en `Application` y `Api`
 - [x] Suite automatizada inicial:
   - tests de `Application`
-  - tests de `Core.Contracts`
   - tests de `Infrastructure` en happy path
   - tests de `Api`
 - [x] Script de ejecucion secuencial de tests
@@ -52,10 +56,6 @@ Construir un backend solido para PortfolioWeb que pueda:
   - tests unitarios, de API e integracion sobre auth/authz
 
 ### En progreso funcionalmente, pero no cerrado del todo
-- [~] Endurecimiento de la API
-  - ya existe validacion de IDs y varios casos funcionales
-  - faltan validaciones de payload mas cercanas al borde HTTP
-  - algunos limites de longitud siguen descansando en EF / base de datos en vez de validarse antes
 - [~] Testing
   - la base esta montada y es util
   - ya hay escenarios no felices relevantes en `Api` e `Infrastructure`
@@ -64,16 +64,7 @@ Construir un backend solido para PortfolioWeb que pueda:
 
 ## Pendiente para considerar el MVP como cerrado
 
-### 1. Endurecimiento final de la API
-- [ ] Revisar todos los DTOs de entrada para que validen explicitamente lo necesario antes de llegar a persistencia
-- [ ] Homogeneizar respuestas de error esperadas por tipo de caso de uso
-- [ ] Anadir validaciones que hoy dependen solo de EF / base de datos:
-  - longitudes maximas
-  - campos obligatorios
-  - incoherencias entre entidades relacionadas
-- [ ] Revisar contratos de request/response para que el frontend tenga una superficie estable
-
-### 2. Test automaticos con foco en fiabilidad
+### 1. Test automaticos con foco en fiabilidad
 - [x] Completar tests de escenarios negativos asumibles en `Infrastructure`
 - [x] Anadir tests de integracion con PostgreSQL real para los puntos criticos de persistencia
 - [x] Cubrir mejor validaciones y errores HTTP visibles desde controladores / handler global
@@ -83,19 +74,19 @@ Construir un backend solido para PortfolioWeb que pueda:
   - usuario inactivo tras emitir token
   - duplicado real de persistencia en registro
 - [x] Ejecutar revision destructiva manual de la suite completa para buscar falsos verdes y huecos de regresion
-- [ ] Cubrir rechazo de JWT invalidos o expirados en endpoints protegidos
-- [ ] Endurecer tests de validacion HTTP para comprobar errores por campo y no solo `400`
+- [x] Cubrir rechazo de JWT invalidos o expirados en endpoints protegidos
+- [x] Endurecer tests de validacion HTTP para comprobar errores por campo y no solo `400`
 - [ ] Decidir si compensa anadir un happy path autenticado full-stack con servicios y repositorios reales bajo HTTP
 - [ ] Dejar claro que parte del sistema queda protegida por unit tests y que parte por integration tests
 
-### 3. Seguridad base
+### 2. Seguridad base
 - [ ] Definir y aplicar el minimo de seguridad exigible para un backend desplegable:
   - secretos fuera del codigo
   - configuracion segura por entorno
   - superficie de error controlada
   - revision de exposicion innecesaria en entornos no locales
 
-### 4. Slice tecnica `User + Authentication + Authorization`
+### 3. Slice tecnica `User + Authentication + Authorization`
 - [x] Completada
 
 #### Alcance entregado
@@ -114,7 +105,7 @@ Construir un backend solido para PortfolioWeb que pueda:
 - [x] Sin roles complejos
 - [x] `Role` simple con valor inicial `User`
 
-### 5. Criterio de salida a despliegue
+### 4. Criterio de salida a despliegue
 - [ ] Definir un flujo minimo de despliegue reproducible
 - [ ] Verificar que el contenedor de API funciona con configuracion externa limpia
 - [ ] Dejar resuelta la estrategia de migraciones para entorno desplegado
@@ -122,10 +113,9 @@ Construir un backend solido para PortfolioWeb que pueda:
   - CI de build + test como minimo
 
 ## Orden recomendado de ejecucion
-1. Cerrar endurecimiento de API
-2. Completar bateria de tests pendiente
-3. Aplicar seguridad base ligada a la autenticacion/autorizacion ya implementada
-4. Cerrar criterios de despliegue
+1. Completar bateria de tests pendiente
+2. Aplicar seguridad base ligada a la autenticacion/autorizacion ya implementada
+3. Cerrar criterios de despliegue
 
 ## Fuera de alcance por ahora
 - Frontend

@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 using PortfolioWeb.Application.Contract.Serialization;
 
-namespace PortfolioWeb.Application.Contract.DTOs;
+namespace PortfolioWeb.Application.Contract.Dtos;
 
-public class ProjectDTO
+public class ProjectDto
 {
     public Guid Id { get; set; }
 
@@ -20,3 +20,4 @@ public class ProjectDTO
 
     public bool IsInDevelopment { get; set; }
 }
+

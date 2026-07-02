@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Services;
 using PortfolioWeb.Core.Contracts.Exceptions;
@@ -39,7 +39,7 @@ public class AuthServiceTest
     public void Register_ShouldThrowInvalidAuthRequestException_WhenEmailIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthRequestException>(async () =>
-            await _authService.Register(new RegisterUserDTO
+            await _authService.Register(new RegisterUserDto
             {
                 Email = " ",
                 Password = "password",
@@ -54,7 +54,7 @@ public class AuthServiceTest
     public void Register_ShouldThrowInvalidAuthRequestException_WhenPasswordIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthRequestException>(async () =>
-            await _authService.Register(new RegisterUserDTO
+            await _authService.Register(new RegisterUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = " ",
@@ -69,7 +69,7 @@ public class AuthServiceTest
     public void Register_ShouldThrowInvalidAuthRequestException_WhenAuthorNameIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthRequestException>(async () =>
-            await _authService.Register(new RegisterUserDTO
+            await _authService.Register(new RegisterUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = "password",
@@ -90,7 +90,7 @@ public class AuthServiceTest
             .ReturnsAsync(CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), email, "Manuel", true));
 
         var exception = Assert.ThrowsAsync<DuplicateEmailException>(async () =>
-            await _authService.Register(new RegisterUserDTO
+            await _authService.Register(new RegisterUserDto
             {
                 Email = email,
                 Password = "password",
@@ -117,7 +117,7 @@ public class AuthServiceTest
             .ThrowsAsync(new InfrastructurePersistenceException("duplicate email"));
 
         var exception = Assert.ThrowsAsync<DuplicateEmailException>(async () =>
-            await _authService.Register(new RegisterUserDTO
+            await _authService.Register(new RegisterUserDto
             {
                 Email = email,
                 Password = "password",
@@ -142,7 +142,7 @@ public class AuthServiceTest
             .Callback<User, CancellationToken>((user, _) => createdUserArgument = user)
             .ReturnsAsync(persistedUser);
 
-        var result = await _authService.Register(new RegisterUserDTO
+        var result = await _authService.Register(new RegisterUserDto
         {
             Email = "  Manuel@Portfolio.Local  ",
             Password = "password",
@@ -169,7 +169,7 @@ public class AuthServiceTest
     public void Login_ShouldThrowInvalidAuthRequestException_WhenEmailIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthRequestException>(async () =>
-            await _authService.Login(new LoginUserDTO
+            await _authService.Login(new LoginUserDto
             {
                 Email = " ",
                 Password = "password"
@@ -183,7 +183,7 @@ public class AuthServiceTest
     public void Login_ShouldThrowInvalidAuthRequestException_WhenPasswordIsEmpty()
     {
         var exception = Assert.ThrowsAsync<InvalidAuthRequestException>(async () =>
-            await _authService.Login(new LoginUserDTO
+            await _authService.Login(new LoginUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = " "
@@ -201,7 +201,7 @@ public class AuthServiceTest
             .ReturnsAsync((User?)null);
 
         var exception = Assert.ThrowsAsync<InvalidCredentialsException>(async () =>
-            await _authService.Login(new LoginUserDTO
+            await _authService.Login(new LoginUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = "password"
@@ -220,7 +220,7 @@ public class AuthServiceTest
             .ReturnsAsync(user);
 
         var exception = Assert.ThrowsAsync<InactiveUserException>(async () =>
-            await _authService.Login(new LoginUserDTO
+            await _authService.Login(new LoginUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = "password"
@@ -239,7 +239,7 @@ public class AuthServiceTest
             .ReturnsAsync(user);
 
         var exception = Assert.ThrowsAsync<InvalidCredentialsException>(async () =>
-            await _authService.Login(new LoginUserDTO
+            await _authService.Login(new LoginUserDto
             {
                 Email = "manuel@portfolio.local",
                 Password = "wrong-password"
@@ -257,7 +257,7 @@ public class AuthServiceTest
             .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var result = await _authService.Login(new LoginUserDTO
+        var result = await _authService.Login(new LoginUserDto
         {
             Email = "  Manuel@Portfolio.Local ",
             Password = "password"
@@ -354,3 +354,4 @@ public class AuthServiceTest
         return $"100000.{salt}.{hash}";
     }
 }
+

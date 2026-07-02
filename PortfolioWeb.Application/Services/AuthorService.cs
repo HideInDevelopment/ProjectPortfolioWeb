@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Services;
@@ -13,7 +13,7 @@ public class AuthorService(
     IAuthorRepository authorRepository,
     ILogger<AuthorService> logger) : IAuthorService
 {
-    public async Task<AuthorDTO> GetById(Guid id, CancellationToken cancellationToken = default)
+    public async Task<AuthorDto> GetById(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -29,19 +29,19 @@ public class AuthorService(
             throw new AuthorNotFoundException(id);
         }
 
-        return AuthorMapper.MapToDTO(author);
+        return AuthorMapper.MapToDto(author);
     }
 
-    public async Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default)
+    public async Task<List<AuthorDto>> GetAll(CancellationToken cancellationToken = default)
     {
         var authors = await authorRepository.GetAll(cancellationToken);
 
         return authors
-            .Select(AuthorMapper.MapToDTO)
+            .Select(AuthorMapper.MapToDto)
             .ToList();
     }
 
-    public async Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+    public async Task<AuthorDto> Update(PersistAuthorDto authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (currentAuthorId == Guid.Empty)
         {
@@ -64,7 +64,7 @@ public class AuthorService(
 
         logger.AuthorUpdatedSuccessfully(updatedAuthor.Id);
 
-        return AuthorMapper.MapToDTO(updatedAuthor);
+        return AuthorMapper.MapToDto(updatedAuthor);
     }
 
     public async Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default)
@@ -96,3 +96,4 @@ public class AuthorService(
         logger.AuthorDeletedSuccessfully(id);
     }
 }
+

@@ -1,19 +1,20 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Domain.Entities;
 
 namespace PortfolioWeb.Application.Mappers;
 
 public static class AuthorMapper
 {
-    public static AuthorDTO MapToDTO(Author author) =>
+    public static AuthorDto MapToDto(Author author) =>
         new()
         {
             Id = author.Id,
             Name = author.Name,
             Projects = author.Projects
-                .Select(ProjectMapper.MapToDTO)
+                .Select(ProjectMapper.MapToDto)
                 .ToList()
         };
 
-    public static Author MapToEntity(PersistAuthorDTO authorDto) => new(authorDto.Name);
+    public static Author MapToEntity(PersistAuthorDto authorDto) => new(authorDto.Name);
 }
+

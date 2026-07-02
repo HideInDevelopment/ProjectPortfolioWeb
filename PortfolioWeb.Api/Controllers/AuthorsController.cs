@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Services;
 using PortfolioWeb.Api.Security;
 
@@ -13,16 +13,16 @@ public class AuthorsController(
     IAuthService authService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<AuthorDTO>>> GetAll(CancellationToken cancellationToken) =>
+    public async Task<ActionResult<List<AuthorDto>>> GetAll(CancellationToken cancellationToken) =>
         Ok(await authorService.GetAll(cancellationToken));
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<AuthorDTO>> GetById(Guid id, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<AuthorDto>> GetById(Guid id, CancellationToken cancellationToken) =>
         Ok(await authorService.GetById(id, cancellationToken));
 
     [Authorize]
     [HttpPut]
-    public async Task<ActionResult<AuthorDTO>> Update([FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthorDto>> Update([FromBody] PersistAuthorDto authorDto, CancellationToken cancellationToken)
     {
         if (!User.TryGetEmail(out var email))
         {
@@ -62,3 +62,4 @@ public class AuthorsController(
         return NoContent();
     }
 }
+

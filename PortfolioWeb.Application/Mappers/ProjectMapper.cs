@@ -1,13 +1,13 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Domain.Entities;
 
 namespace PortfolioWeb.Application.Mappers;
 
 public static class ProjectMapper
 {
-    public static ProjectDTO MapToDTO(Project project)
+    public static ProjectDto MapToDto(Project project)
     {
-        return new ProjectDTO
+        return new ProjectDto
         {
             Id = project.Id,
             Title = project.Title,
@@ -19,7 +19,7 @@ public static class ProjectMapper
         };
     }
 
-    public static Project MapToEntity(CreateProjectDTO projectDto, Guid authorId)
+    public static Project MapToEntity(CreateProjectDto projectDto, Guid authorId)
     {
         return new Project(
             projectDto.Title,
@@ -30,3 +30,4 @@ public static class ProjectMapper
             projectDto.IsInDevelopment);
     }
 }
+

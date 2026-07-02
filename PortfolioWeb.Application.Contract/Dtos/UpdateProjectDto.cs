@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace PortfolioWeb.Application.Contract.DTOs;
+namespace PortfolioWeb.Application.Contract.Dtos;
 
-public class UpdateProjectDTO
+public class UpdateProjectDto
 {
     [Required(ErrorMessage = "Title is required.")]
     [StringLength(200, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 200 characters.")]
@@ -12,7 +12,9 @@ public class UpdateProjectDTO
     [StringLength(2000, MinimumLength = 1, ErrorMessage = "Description must be between 1 and 2000 characters.")]
     public string Description { get; set; } = string.Empty;
 
+    [Range(0, int.MaxValue, ErrorMessage = "Version must be zero or greater.")]
     public int Version { get; set; }
 
     public bool IsInDevelopment { get; set; }
 }
+

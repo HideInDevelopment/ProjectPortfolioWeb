@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Contract.Exceptions.Project;
@@ -15,7 +15,7 @@ public class ProjectService(
     IAuthorRepository authorRepository,
     ILogger<ProjectService> logger) : IProjectService
 {
-    public async Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ProjectDto> GetById(Guid id, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -27,7 +27,7 @@ public class ProjectService(
 
         if (project is not null)
         {
-            return ProjectMapper.MapToDTO(project);
+            return ProjectMapper.MapToDto(project);
         }
         
         logger.ProjectNotFoundDuringRetrieval(id);
@@ -35,16 +35,16 @@ public class ProjectService(
 
     }
 
-    public async Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default)
+    public async Task<List<ProjectDto>> GetAll(CancellationToken cancellationToken = default)
     {
         var projects = await projectRepository.GetAll(cancellationToken);
 
         return projects
-            .Select(ProjectMapper.MapToDTO)
+            .Select(ProjectMapper.MapToDto)
             .ToList();
     }
 
-    public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDto> Create(CreateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (currentAuthorId == Guid.Empty)
         {
@@ -67,10 +67,10 @@ public class ProjectService(
 
         logger.ProjectCreatedSuccessfully(createdProject.Id, createdProject.AuthorId);
 
-        return ProjectMapper.MapToDTO(createdProject);
+        return ProjectMapper.MapToDto(createdProject);
     }
 
-    public async Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDto> Update(Guid id, UpdateProjectDto projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -109,7 +109,7 @@ public class ProjectService(
 
         logger.ProjectUpdatedSuccessfully(updatedProject.Id);
 
-        return ProjectMapper.MapToDTO(updatedProject);
+        return ProjectMapper.MapToDto(updatedProject);
     }
 
     public async Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default)
@@ -141,3 +141,4 @@ public class ProjectService(
         logger.ProjectDeletedSuccessfully(id);
     }
 }
+

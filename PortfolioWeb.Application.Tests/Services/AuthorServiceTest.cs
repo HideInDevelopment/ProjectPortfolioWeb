@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
 using PortfolioWeb.Application.Services;
@@ -102,7 +102,7 @@ public class AuthorServiceTest
     public async Task Update_ShouldMapPersistAuthorDtoAndReturnUpdatedAuthorDto_WhenAuthorExists()
     {
         var authorId = Guid.NewGuid();
-        var authorDto = new PersistAuthorDTO
+        var authorDto = new PersistAuthorDto
         {
             Name = "Updated Name"
         };
@@ -130,7 +130,7 @@ public class AuthorServiceTest
     [Test]
     public void Update_ShouldThrowInvalidAuthorIdException_WhenCurrentAuthorIdIsEmpty()
     {
-        var authorDto = new PersistAuthorDTO
+        var authorDto = new PersistAuthorDto
         {
             Name = "Updated Name"
         };
@@ -148,7 +148,7 @@ public class AuthorServiceTest
     public void Update_ShouldThrowAuthorNotFoundException_WhenAuthorDoesNotExist()
     {
         var authorId = Guid.NewGuid();
-        var authorDto = new PersistAuthorDTO
+        var authorDto = new PersistAuthorDto
         {
             Name = "Updated Name"
         };
@@ -240,3 +240,4 @@ public class AuthorServiceTest
         };
     }
 }
+

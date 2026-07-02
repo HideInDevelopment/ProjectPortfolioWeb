@@ -1,4 +1,4 @@
-using PortfolioWeb.Application.Contract.DTOs;
+using PortfolioWeb.Application.Contract.Dtos;
 using PortfolioWeb.Application.Mappers;
 using PortfolioWeb.Domain.Entities;
 
@@ -7,7 +7,7 @@ namespace PortfolioWeb.Application.Tests.Mappers;
 public class ProjectMapperTest
 {
     [Test]
-    public void MapToDTO_ShouldMapProjectCorrectly()
+    public void MapToDto_ShouldMapProjectCorrectly()
     {
         var projectId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -23,7 +23,7 @@ public class ProjectMapperTest
             Id = projectId
         };
 
-        var result = ProjectMapper.MapToDTO(project);
+        var result = ProjectMapper.MapToDto(project);
 
         Assert.Multiple(() =>
         {
@@ -42,7 +42,7 @@ public class ProjectMapperTest
     {
         var authorId = Guid.NewGuid();
         var releaseDate = new DateTimeOffset(2026, 07, 01, 0, 0, 0, TimeSpan.Zero);
-        var projectDto = new CreateProjectDTO
+        var projectDto = new CreateProjectDto
         {
             Title = "VetApp",
             Description = "Vet manager for schedule appointments.",
@@ -65,3 +65,4 @@ public class ProjectMapperTest
         });
     }
 }
+
