@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using PortfolioWeb.Application.Contract.DTOs;
 using PortfolioWeb.Application.Contract.Exceptions.Auth;
 using PortfolioWeb.Application.Contract.Exceptions.Author;
@@ -19,29 +20,30 @@ using PortfolioWeb.Core.Contracts.Exceptions;
 using PortfolioWeb.Core.Contracts.Repositories;
 using PortfolioWeb.Domain.Entities;
 using PortfolioWeb.Infrastructure.Persistence;
+using PortfolioWeb.Infrastructure.Repositories;
 
 namespace PortfolioWeb.Api.Tests.Integration;
 
 public class ProgramIntegrationTest
 {
-    private TestWebApplicationFactory factory = null!;
+    private TestWebApplicationFactory _factory = null!;
 
     [SetUp]
     public void SetUp()
     {
-        factory = new TestWebApplicationFactory();
+        _factory = new TestWebApplicationFactory();
     }
 
     [TearDown]
     public void TearDown()
     {
-        factory.Dispose();
+        _factory.Dispose();
     }
 
     [Test]
     public async Task OpenApiEndpoint_ShouldBeAvailable()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         var response = await client.GetAsync("/openapi/v1.json");
 
@@ -55,11 +57,32 @@ public class ProgramIntegrationTest
     [Test]
     public async Task ScalarEndpoint_ShouldBeAvailable()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         var response = await client.GetAsync("/scalar");
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
+    public async Task OpenApiEndpoint_ShouldDescribeBearerSecurityForProtectedOperations()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/openapi/v1.json");
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        var root = document.RootElement;
+        var securitySchemes = root.GetProperty("components").GetProperty("securitySchemes");
+        var projectsPost = root.GetProperty("paths").GetProperty("/api/Projects").GetProperty("post");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(securitySchemes.TryGetProperty("Bearer", out _), Is.True);
+            Assert.That(projectsPost.TryGetProperty("security", out var security), Is.True);
+            Assert.That(security.GetArrayLength(), Is.GreaterThan(0));
+        });
     }
 
     [Test]
@@ -166,18 +189,29 @@ public class ProgramIntegrationTest
         AuthenticateClient(client, authResponse!.AccessToken);
 
         using var updateResponse = await client.PutAsync(
-            $"/api/Authors/{userRepository.CreatedUser!.Author.Id}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
             }));
         var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+        var createdUser = userRepository.CreatedUser;
+        if (author is null)
+        {
+            Assert.Fail("Expected updated author payload.");
+            return;
+        }
+
+        if (createdUser is null)
+        {
+            Assert.Fail("Expected created user to be stored by the in-memory repository.");
+            return;
+        }
 
         Assert.Multiple(() =>
         {
             Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(author, Is.Not.Null);
-            Assert.That(author!.Id, Is.EqualTo(userRepository.CreatedUser.Author.Id));
+            Assert.That(author.Id, Is.EqualTo(createdUser.Author.Id));
             Assert.That(author.Name, Is.EqualTo("Updated Manuel"));
         });
     }
@@ -216,18 +250,29 @@ public class ProgramIntegrationTest
         AuthenticateClient(client, authResponse!.AccessToken);
 
         using var updateResponse = await client.PutAsync(
-            $"/api/Authors/{userRepository.CreatedUser!.Author.Id}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated After Login"
             }));
         var author = await updateResponse.Content.ReadFromJsonAsync<AuthorDTO>();
+        var createdUser = userRepository.CreatedUser;
+        if (author is null)
+        {
+            Assert.Fail("Expected updated author payload.");
+            return;
+        }
+
+        if (createdUser is null)
+        {
+            Assert.Fail("Expected created user to be stored by the in-memory repository.");
+            return;
+        }
 
         Assert.Multiple(() =>
         {
             Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(author, Is.Not.Null);
-            Assert.That(author!.Id, Is.EqualTo(userRepository.CreatedUser.Author.Id));
+            Assert.That(author.Id, Is.EqualTo(createdUser.Author.Id));
             Assert.That(author.Name, Is.EqualTo("Updated After Login"));
         });
     }
@@ -235,10 +280,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task Login_And_WriteEndpoints_ShouldPersistThroughRealServicesAndRepositories()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         var uniqueId = Guid.NewGuid().ToString("N");
         var email = $"manuel.{uniqueId}@portfolio.local";
         var authorName = $"Manuel {uniqueId}";
+
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
 
         var seededUser = CreatePersistedUser(
             email,
@@ -246,7 +294,7 @@ public class ProgramIntegrationTest
             isActive: true,
             passwordHash: HashForTests("password"));
 
-        using (var seedScope = factory.Services.CreateScope())
+        using (var seedScope = _factory.Services.CreateScope())
         {
             var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
             await dbContext.Database.MigrateAsync();
@@ -269,7 +317,7 @@ public class ProgramIntegrationTest
         AuthenticateClient(client, loginAuthResponse!.AccessToken);
 
         using var updateAuthorResponse = await client.PutAsync(
-            $"/api/Authors/{seededUser.Author.Id}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -284,7 +332,6 @@ public class ProgramIntegrationTest
                 Description = "Personal portfolio website.",
                 ReleaseDate = "2026-07-01T00:00:00+00:00",
                 Version = 1,
-                AuthorId = seededUser.Author.Id,
                 IsInDevelopment = true
             }));
         var createdProject = await createProjectResponse.Content.ReadFromJsonAsync<ProjectDTO>();
@@ -300,7 +347,7 @@ public class ProgramIntegrationTest
             Assert.That(createdProject.Title, Is.EqualTo("PortfolioWeb"));
         });
 
-        using var verificationScope = factory.Services.CreateScope();
+        using var verificationScope = _factory.Services.CreateScope();
         var verificationDbContext = verificationScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
         var persistedAuthor = await verificationDbContext.Authors
             .Include(author => author.Projects)
@@ -311,6 +358,44 @@ public class ProgramIntegrationTest
             Assert.That(persistedAuthor.Name, Is.EqualTo("Updated Manuel"));
             Assert.That(persistedAuthor.Projects, Has.Count.EqualTo(1));
             Assert.That(persistedAuthor.Projects[0].Title, Is.EqualTo("PortfolioWeb"));
+        });
+    }
+
+    [Test]
+    public async Task Register_ShouldReturnConflict_WhenEmailAlreadyExists_WithRealServicesAndRepositories()
+    {
+        using var client = _factory.CreateClient();
+        var uniqueId = Guid.NewGuid().ToString("N");
+        var email = $"duplicate.{uniqueId}@portfolio.local";
+
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
+
+        using var firstResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = email,
+                Password = "password",
+                AuthorName = "First Author"
+            }));
+
+        using var secondResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = email,
+                Password = "password",
+                AuthorName = "Second Author"
+            }));
+        var problemDetails = await secondResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(secondResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Duplicate email"));
         });
     }
 
@@ -341,64 +426,204 @@ public class ProgramIntegrationTest
     }
 
     [Test]
-    public async Task AuthenticatedAuthorUpdate_ShouldReturnForbidden_WhenOwnershipCheckFails()
+    public async Task Register_ShouldReturnConflict_WhenRealPostgreSqlUniqueConstraintIsHitDuringRace()
     {
-        var userRepository = new InMemoryUserRepository();
-        using var client = CreateClientWithUserRepositoryAndAuthorService(
-            userRepository,
-            new OwnershipProbeAuthorService());
+        var email = $"race.{Guid.NewGuid():N}@portfolio.local";
+        using var client = CreateClientWithForcedDuplicateEmailRace(email);
 
-        using var registerResponse = await client.PostAsync(
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
+
+        var firstRequest = client.PostAsync(
             "/api/auth/register",
             CreateJsonContent(new
             {
-                Email = "manuel@portfolio.local",
+                Email = email,
                 Password = "password",
-                AuthorName = "Manuel"
+                AuthorName = "First"
             }));
-        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
 
-        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var secondRequest = client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = email,
+                Password = "password",
+                AuthorName = "Second"
+            }));
+
+        await Task.WhenAll(firstRequest, secondRequest);
+
+        var responses = new[] { firstRequest.Result, secondRequest.Result };
+        var statusCodes = responses.Select(response => response.StatusCode).OrderBy(code => code).ToArray();
+        var conflictResponse = responses.Single(response => response.StatusCode == HttpStatusCode.Conflict);
+        var problemDetails = await conflictResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                statusCodes,
+                Is.EquivalentTo(new[] { HttpStatusCode.Conflict, HttpStatusCode.OK }),
+                $"Actual statuses: {string.Join(", ", statusCodes)}");
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Duplicate email"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteAuthor_ShouldReturnForbidden_WhenAuthenticatedUserTargetsAnotherAuthor_WithRealServicesAndRepositories()
+    {
+        using var client = _factory.CreateClient();
+        var firstUser = CreatePersistedUser(
+            $"owner.{Guid.NewGuid():N}@portfolio.local",
+            "Owner Author",
+            passwordHash: HashForTests("password"));
+        var secondUser = CreatePersistedUser(
+            $"other.{Guid.NewGuid():N}@portfolio.local",
+            "Other Author",
+            passwordHash: HashForTests("password"));
+
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
+
+        using (var seedScope = _factory.Services.CreateScope())
+        {
+            var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+            await dbContext.Database.MigrateAsync();
+            dbContext.Users.Add(firstUser);
+            dbContext.Users.Add(secondUser);
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var loginResponse = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = firstUser.Email,
+                Password = "password"
+            }));
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(authResponse, Is.Not.Null);
+
+        AuthenticateClient(client, authResponse!.AccessToken);
+
+        using var deleteResponse = await client.DeleteAsync($"/api/Authors/{secondUser.Author.Id}");
+        var problemDetails = await deleteResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Forbidden resource access"));
+        });
+    }
+
+    [Test]
+    public async Task UpdateProject_ShouldReturnForbidden_WhenAuthenticatedUserTargetsAnotherAuthorsProject_WithRealServicesAndRepositories()
+    {
+        using var client = _factory.CreateClient();
+        var firstUser = CreatePersistedUser(
+            $"project.owner.{Guid.NewGuid():N}@portfolio.local",
+            "Project Owner",
+            passwordHash: HashForTests("password"));
+        var secondUser = CreatePersistedUser(
+            $"project.other.{Guid.NewGuid():N}@portfolio.local",
+            "Project Other",
+            passwordHash: HashForTests("password"));
+        var secondUserProject = new Project(
+            "Original Title",
+            "Original Description",
+            new DateTimeOffset(2026, 07, 02, 0, 0, 0, TimeSpan.Zero),
+            1,
+            secondUser.Author.Id,
+            true)
+        {
+            Id = Guid.NewGuid()
+        };
+
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
+
+        using (var seedScope = _factory.Services.CreateScope())
+        {
+            var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+            await dbContext.Database.MigrateAsync();
+            dbContext.Users.Add(firstUser);
+            dbContext.Users.Add(secondUser);
+            dbContext.Projects.Add(secondUserProject);
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var loginResponse = await client.PostAsync(
+            "/api/auth/login",
+            CreateJsonContent(new
+            {
+                Email = firstUser.Email,
+                Password = "password"
+            }));
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
 
         AuthenticateClient(client, authResponse!.AccessToken);
 
         using var updateResponse = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            $"/api/Projects/{secondUserProject.Id}",
             CreateJsonContent(new
             {
-                Name = "Updated Manuel"
+                Title = "Updated",
+                Description = "Updated description",
+                Version = 2,
+                IsInDevelopment = false
             }));
         var problemDetails = await updateResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
 
         Assert.Multiple(() =>
         {
             Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-            Assert.That(updateResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Forbidden resource access"));
-            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Forbidden));
         });
     }
 
     [Test]
-    public async Task AuthenticatedProjectCreate_ShouldReturnForbidden_WhenOwnershipCheckFails()
+    public async Task DeleteEndpoints_ShouldReturnNoContent_WhenAuthenticatedOwner()
     {
-        using var client = CreateClientWithUserRepositoryAndProjectService(
-            new InMemoryUserRepository(),
-            new OwnershipProbeProjectService());
+        using var client = _factory.CreateClient();
+        var uniqueId = Guid.NewGuid().ToString("N");
+        var email = $"delete.{uniqueId}@portfolio.local";
+        var authorName = $"Delete {uniqueId}";
 
-        using var registerResponse = await client.PostAsync(
-            "/api/auth/register",
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+        await ResetApiTestDatabaseAsync();
+
+        var seededUser = CreatePersistedUser(
+            email,
+            authorName,
+            isActive: true,
+            passwordHash: HashForTests("password"));
+
+        using (var seedScope = _factory.Services.CreateScope())
+        {
+            var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+            await dbContext.Database.MigrateAsync();
+            dbContext.Users.Add(seededUser);
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var loginResponse = await client.PostAsync(
+            "/api/auth/login",
             CreateJsonContent(new
             {
-                Email = "manuel@portfolio.local",
-                Password = "password",
-                AuthorName = "Manuel"
+                Email = email,
+                Password = "password"
             }));
-        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDTO>();
 
-        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(authResponse, Is.Not.Null);
 
         AuthenticateClient(client, authResponse!.AccessToken);
@@ -411,18 +636,18 @@ public class ProgramIntegrationTest
                 Description = "Personal portfolio website.",
                 ReleaseDate = "2026-07-01T00:00:00+00:00",
                 Version = 1,
-                AuthorId = Guid.NewGuid(),
                 IsInDevelopment = true
             }));
-        var problemDetails = await createResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        var createdProject = await createResponse.Content.ReadFromJsonAsync<ProjectDTO>();
+
+        using var deleteProjectResponse = await client.DeleteAsync($"/api/Projects/{createdProject!.Id}");
+        using var deleteAuthorResponse = await client.DeleteAsync($"/api/Authors/{seededUser.Author.Id}");
 
         Assert.Multiple(() =>
         {
-            Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-            Assert.That(createResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
-            Assert.That(problemDetails, Is.Not.Null);
-            Assert.That(problemDetails!.Title, Is.EqualTo("Forbidden resource access"));
-            Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.Forbidden));
+            Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            Assert.That(deleteProjectResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(deleteAuthorResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
         });
     }
 
@@ -430,7 +655,7 @@ public class ProgramIntegrationTest
     public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtDoesNotContainAuthorId()
     {
         var userRepository = new InMemoryUserRepository();
-        userRepository.AddUser(CreatePersistedUser("manuel@portfolio.local", "Manuel", true));
+        userRepository.AddUser(CreatePersistedUser("manuel@portfolio.local", "Manuel"));
 
         using var client = CreateClientWithUserRepositoryAndAuthorService(
             userRepository,
@@ -438,7 +663,7 @@ public class ProgramIntegrationTest
         AuthenticateClient(client, CreateAccessTokenWithoutAuthorId("manuel@portfolio.local"));
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -472,7 +697,7 @@ public class ProgramIntegrationTest
         AuthenticateClient(client, authResponse!.AccessToken);
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{userRepository.CreatedUser.Author.Id}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -492,13 +717,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtIsExpired()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         AuthenticateClient(client, CreateAccessToken(
             authorId: Guid.NewGuid(),
             expiresUtc: DateTime.UtcNow.AddMinutes(-5)));
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -510,13 +735,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtSignatureIsInvalid()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         AuthenticateClient(client, CreateAccessToken(
             authorId: Guid.NewGuid(),
             signingKey: "ThisIsAnotherTestSigningKeyWithEnoughLength456!"));
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -528,13 +753,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtAudienceIsInvalid()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         AuthenticateClient(client, CreateAccessToken(
             authorId: Guid.NewGuid(),
             audience: "AnotherAudience"));
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -546,13 +771,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task ProtectedAuthorEndpoint_ShouldReturnUnauthorized_WhenJwtIssuerIsInvalid()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         AuthenticateClient(client, CreateAccessToken(
             authorId: Guid.NewGuid(),
             issuer: "AnotherIssuer"));
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated Manuel"
@@ -574,7 +799,6 @@ public class ProgramIntegrationTest
             Description = "Valid description",
             ReleaseDate = "2026-07-01T00:00:00+00:00",
             Version = 1,
-            AuthorId = authorId,
             IsInDevelopment = true
         };
 
@@ -590,6 +814,64 @@ public class ProgramIntegrationTest
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Errors, Contains.Key("Title"));
             Assert.That(problemDetails.Errors["Title"], Has.Some.Contains("between 1 and 200"));
+        });
+    }
+
+    [Test]
+    public async Task CreateProject_ShouldReturnBadRequest_WhenDescriptionFailsDtoValidation()
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+        var payload = new
+        {
+            Title = "Valid title",
+            Description = string.Empty,
+            ReleaseDate = "2026-07-01T00:00:00+00:00",
+            Version = 1,
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Description"));
+            Assert.That(problemDetails.Errors["Description"], Is.Not.Empty);
+        });
+    }
+
+    [Test]
+    public async Task CreateProject_ShouldReturnBadRequest_WhenReleaseDateIsMalformed()
+    {
+        using var client = CreateClientWithProjectService(new ThrowingProjectService(
+            new Exception("Project service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+        var payload = new
+        {
+            Title = "Valid title",
+            Description = "Valid description",
+            ReleaseDate = "not-a-date",
+            Version = 1,
+            IsInDevelopment = true
+        };
+
+        using var response = await client.PostAsync(
+            "/api/Projects",
+            CreateJsonContent(payload));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("$.ReleaseDate"));
+            Assert.That(problemDetails.Errors["$.ReleaseDate"], Has.Some.Contains("not a valid date"));
         });
     }
 
@@ -625,14 +907,13 @@ public class ProgramIntegrationTest
     [Test]
     public async Task CreateProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
         var payload = new
         {
             Title = "PortfolioWeb",
             Description = "Personal portfolio website.",
             ReleaseDate = "2026-07-01T00:00:00+00:00",
             Version = 1,
-            AuthorId = Guid.NewGuid(),
             IsInDevelopment = true
         };
 
@@ -646,7 +927,7 @@ public class ProgramIntegrationTest
     [Test]
     public async Task UpdateProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         using var response = await client.PutAsync(
             $"/api/Projects/{Guid.NewGuid()}",
@@ -664,7 +945,7 @@ public class ProgramIntegrationTest
     [Test]
     public async Task DeleteProject_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         using var response = await client.DeleteAsync($"/api/Projects/{Guid.NewGuid()}");
 
@@ -674,10 +955,10 @@ public class ProgramIntegrationTest
     [Test]
     public async Task UpdateAuthor_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         using var response = await client.PutAsync(
-            $"/api/Authors/{Guid.NewGuid()}",
+            "/api/Authors",
             CreateJsonContent(new
             {
                 Name = "Updated"
@@ -689,7 +970,7 @@ public class ProgramIntegrationTest
     [Test]
     public async Task DeleteAuthor_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
     {
-        using var client = factory.CreateClient();
+        using var client = _factory.CreateClient();
 
         using var response = await client.DeleteAsync($"/api/Authors/{Guid.NewGuid()}");
 
@@ -750,6 +1031,30 @@ public class ProgramIntegrationTest
     }
 
     [Test]
+    public async Task UpdateAuthor_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
+    {
+        using var client = CreateClientWithAuthorService(new ThrowingAuthorService(
+            new Exception("Author service should not be reached for invalid payloads.")));
+        AuthenticateClient(client, Guid.NewGuid());
+
+        using var response = await client.PutAsync(
+            "/api/Authors",
+            CreateJsonContent(new
+            {
+                Name = string.Empty
+            }));
+        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Errors, Contains.Key("Name"));
+            Assert.That(problemDetails.Errors["Name"], Is.Not.Empty);
+        });
+    }
+
+    [Test]
     public async Task Login_ShouldReturnBadRequest_WhenPayloadFailsDtoValidation()
     {
         using var client = CreateClientWithAuthService(new ThrowingAuthService(
@@ -776,7 +1081,7 @@ public class ProgramIntegrationTest
 
     private HttpClient CreateClientWithAuthorService(IAuthorService authorService)
     {
-        return factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
@@ -792,7 +1097,7 @@ public class ProgramIntegrationTest
 
     private HttpClient CreateClientWithProjectService(IProjectService projectService)
     {
-        return factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
@@ -808,7 +1113,7 @@ public class ProgramIntegrationTest
 
     private HttpClient CreateClientWithAuthService(IAuthService authService)
     {
-        return factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
@@ -824,12 +1129,30 @@ public class ProgramIntegrationTest
 
     private HttpClient CreateClientWithUserRepository(IUserRepository userRepository)
     {
-        return factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<IUserRepository>();
                     services.AddSingleton(userRepository);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = true
+            });
+    }
+
+    private HttpClient CreateClientWithForcedDuplicateEmailRace(string email)
+    {
+        return _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IUserRepository>();
+                    services.AddSingleton(new DuplicateEmailRaceCoordinator(email));
+                    services.AddScoped<UserRepository>();
+                    services.AddScoped<IUserRepository, RealRaceDuplicateUserRepository>();
                 });
             })
             .CreateClient(new WebApplicationFactoryClientOptions
@@ -840,7 +1163,7 @@ public class ProgramIntegrationTest
 
     private HttpClient CreateClientWithUserRepositoryAndAuthorService(IUserRepository userRepository, IAuthorService authorService)
     {
-        return factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
@@ -848,24 +1171,6 @@ public class ProgramIntegrationTest
                     services.AddSingleton(userRepository);
                     services.RemoveAll<IAuthorService>();
                     services.AddSingleton(authorService);
-                });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = true
-            });
-    }
-
-    private HttpClient CreateClientWithUserRepositoryAndProjectService(IUserRepository userRepository, IProjectService projectService)
-    {
-        return factory.WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
-                    services.RemoveAll<IUserRepository>();
-                    services.AddSingleton(userRepository);
-                    services.RemoveAll<IProjectService>();
-                    services.AddSingleton(projectService);
                 });
             })
             .CreateClient(new WebApplicationFactoryClientOptions
@@ -963,7 +1268,7 @@ public class ProgramIntegrationTest
         public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
+        public Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
         public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
@@ -1043,23 +1348,65 @@ public class ProgramIntegrationTest
 
     private sealed class RaceDuplicateUserRepository(string email, string authorName) : IUserRepository
     {
-        private readonly User conflictingUser = CreatePersistedUser(email, authorName);
-        private int getByEmailCallCount;
+        private readonly User _conflictingUser = CreatePersistedUser(email, authorName);
+        private int _getByEmailCallCount;
 
         public Task<User?> GetByEmail(string requestedEmail, CancellationToken cancellationToken = default)
         {
-            getByEmailCallCount++;
+            _getByEmailCallCount++;
 
-            if (getByEmailCallCount == 1)
-            {
-                return Task.FromResult<User?>(null);
-            }
-
-            return Task.FromResult<User?>(requestedEmail == email ? conflictingUser : null);
+            return _getByEmailCallCount == 1 ? Task.FromResult<User?>(null) : Task.FromResult(requestedEmail == email ? _conflictingUser : null);
         }
 
         public Task<User> Create(User user, CancellationToken cancellationToken = default) =>
             throw new InfrastructurePersistenceException("duplicate email");
+    }
+
+    private sealed class RealRaceDuplicateUserRepository(
+        UserRepository innerRepository,
+        DuplicateEmailRaceCoordinator coordinator) : IUserRepository
+    {
+        public Task<User?> GetByEmail(string email, CancellationToken cancellationToken = default) =>
+            innerRepository.GetByEmail(email, cancellationToken);
+
+        public async Task<User> Create(User user, CancellationToken cancellationToken = default)
+        {
+            if (!string.Equals(user.Email, coordinator.Email, StringComparison.Ordinal))
+            {
+                return await innerRepository.Create(user, cancellationToken);
+            }
+
+            var createCallOrder = Interlocked.Increment(ref coordinator.CreateCallCount);
+
+            if (createCallOrder == 1)
+            {
+                coordinator.FirstCreateEntered.Release();
+                await coordinator.SecondCreateCompleted.WaitAsync(cancellationToken);
+                return await innerRepository.Create(user, cancellationToken);
+            }
+
+            await coordinator.FirstCreateEntered.WaitAsync(cancellationToken);
+
+            try
+            {
+                return await innerRepository.Create(user, cancellationToken);
+            }
+            finally
+            {
+                coordinator.SecondCreateCompleted.Release();
+            }
+        }
+    }
+
+    private sealed class DuplicateEmailRaceCoordinator(string email)
+    {
+        public int CreateCallCount;
+
+        public string Email { get; } = email;
+
+        public SemaphoreSlim FirstCreateEntered { get; } = new(0, 1);
+
+        public SemaphoreSlim SecondCreateCompleted { get; } = new(0, 1);
     }
 
     private sealed class OwnershipProbeAuthorService : IAuthorService
@@ -1070,53 +1417,14 @@ public class ProgramIntegrationTest
         public Task<List<AuthorDTO>> GetAll(CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+        public Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
         {
-            if (currentAuthorId != id)
-            {
-                throw new ForbiddenResourceAccessException();
-            }
-
             return Task.FromResult(new AuthorDTO
             {
-                Id = id,
+                Id = currentAuthorId,
                 Name = authorDto.Name
             });
         }
-
-        public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
-            throw new NotImplementedException();
-    }
-
-    private sealed class OwnershipProbeProjectService : IProjectService
-    {
-        public Task<ProjectDTO> GetById(Guid id, CancellationToken cancellationToken = default) =>
-            throw new NotImplementedException();
-
-        public Task<List<ProjectDTO>> GetAll(CancellationToken cancellationToken = default) =>
-            throw new NotImplementedException();
-
-        public Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
-        {
-            if (projectDto.AuthorId != currentAuthorId)
-            {
-                throw new ForbiddenResourceAccessException();
-            }
-
-            return Task.FromResult(new ProjectDTO
-            {
-                Id = Guid.NewGuid(),
-                Title = projectDto.Title,
-                Description = projectDto.Description,
-                ReleaseDate = projectDto.ReleaseDate,
-                Version = projectDto.Version,
-                AuthorId = projectDto.AuthorId,
-                IsInDevelopment = projectDto.IsInDevelopment
-            });
-        }
-
-        public Task<ProjectDTO> Update(Guid id, UpdateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
-            throw new NotImplementedException();
 
         public Task Delete(Guid id, Guid currentAuthorId, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
@@ -1235,5 +1543,36 @@ public class ProgramIntegrationTest
             32));
 
         return $"100000.{salt}.{hash}";
+    }
+
+    private async Task ResetApiTestDatabaseAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    private async Task EnsurePostgreSqlAvailableOrIgnoreAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
+        var connectionString = dbContext.Database.GetConnectionString()
+            ?? throw new InvalidOperationException("PostgreSQL connection string is not configured for API integration tests.");
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Database = "postgres"
+        };
+
+        try
+        {
+            await using var connection = new NpgsqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
+        }
+        catch
+        {
+            Assert.Ignore("PostgreSQL is not available for API integration tests.");
+        }
     }
 }

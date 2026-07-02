@@ -25,7 +25,7 @@ internal static class PostgreSqlDbContextFactory
         await using var context = Create(databaseName);
 
         await context.Database.EnsureDeletedAsync(cancellationToken);
-        await context.Database.EnsureCreatedAsync(cancellationToken);
+        await context.Database.MigrateAsync(cancellationToken);
     }
 
     public static async Task<bool> IsServerAvailableAsync(CancellationToken cancellationToken = default)

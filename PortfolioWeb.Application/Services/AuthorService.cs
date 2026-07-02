@@ -41,31 +41,25 @@ public class AuthorService(
             .ToList();
     }
 
-    public async Task<AuthorDTO> Update(Guid id, PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
+    public async Task<AuthorDTO> Update(PersistAuthorDTO authorDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
-        if (id == Guid.Empty)
+        if (currentAuthorId == Guid.Empty)
         {
             logger.AuthorUpdateRejectedBecauseIdIsEmpty();
             throw new InvalidAuthorIdException();
         }
 
-        if (currentAuthorId != id)
-        {
-            logger.AuthorUpdateRejectedBecauseResourceIsForbidden(currentAuthorId, id);
-            throw new ForbiddenResourceAccessException();
-        }
-
-        logger.UpdatingAuthor(id, authorDto.Name);
+        logger.UpdatingAuthor(currentAuthorId, authorDto.Name);
 
         var author = AuthorMapper.MapToEntity(authorDto);
-        author.Id = id;
+        author.Id = currentAuthorId;
 
         var updatedAuthor = await authorRepository.Update(author, cancellationToken);
 
         if (updatedAuthor is null)
         {
-            logger.AuthorNotFoundDuringUpdate(id);
-            throw new AuthorNotFoundException(id);
+            logger.AuthorNotFoundDuringUpdate(currentAuthorId);
+            throw new AuthorNotFoundException(currentAuthorId);
         }
 
         logger.AuthorUpdatedSuccessfully(updatedAuthor.Id);

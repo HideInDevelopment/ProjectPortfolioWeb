@@ -48,11 +48,10 @@ public class ProjectMapperTest
             Description = "Vet manager for schedule appointments.",
             ReleaseDate = releaseDate,
             Version = 2,
-            AuthorId = authorId,
             IsInDevelopment = false
         };
 
-        var result = ProjectMapper.MapToEntity(projectDto);
+        var result = ProjectMapper.MapToEntity(projectDto, authorId);
 
         Assert.Multiple(() =>
         {
@@ -61,7 +60,7 @@ public class ProjectMapperTest
             Assert.That(result.Description, Is.EqualTo(projectDto.Description));
             Assert.That(result.ReleaseDate, Is.EqualTo(projectDto.ReleaseDate));
             Assert.That(result.Version, Is.EqualTo(projectDto.Version));
-            Assert.That(result.AuthorId, Is.EqualTo(projectDto.AuthorId));
+            Assert.That(result.AuthorId, Is.EqualTo(authorId));
             Assert.That(result.IsInDevelopment, Is.EqualTo(projectDto.IsInDevelopment));
         });
     }

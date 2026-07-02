@@ -8,7 +8,6 @@ $repositoryRoot = Split-Path -Path $PSScriptRoot -Parent
 
 $testProjects = @(
     "PortfolioWeb.Application.Tests\PortfolioWeb.Application.Tests.csproj",
-    "PortfolioWeb.Core.Contracts.Tests\PortfolioWeb.Core.Contracts.Tests.csproj",
     "PortfolioWeb.Infrastructure.Tests\PortfolioWeb.Infrastructure.Tests.csproj",
     "PortfolioWeb.Api.Tests\PortfolioWeb.Api.Tests.csproj"
 )

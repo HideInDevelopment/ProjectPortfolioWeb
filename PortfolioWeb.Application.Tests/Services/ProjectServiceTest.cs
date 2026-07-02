@@ -130,7 +130,7 @@ public class ProjectServiceTest
     }
 
     [Test]
-    public void Create_ShouldThrowInvalidAuthorIdException_WhenAuthorIdIsEmpty()
+    public void Create_ShouldThrowInvalidAuthorIdException_WhenCurrentAuthorIdIsEmpty()
     {
         var projectDto = new CreateProjectDTO
         {
@@ -138,39 +138,13 @@ public class ProjectServiceTest
             Description = "Vet manager for schedule appointments.",
             ReleaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
             Version = 1,
-            AuthorId = Guid.Empty,
             IsInDevelopment = true
         };
 
         var exception = Assert.ThrowsAsync<InvalidAuthorIdException>(
-            async () => await _projectService.Create(projectDto, Guid.NewGuid()));
+            async () => await _projectService.Create(projectDto, Guid.Empty));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided author id is not valid."));
-        _authorRepositoryMock.Verify(
-            x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        _projectRepositoryMock.Verify(
-            x => x.Create(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Test]
-    public void Create_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
-    {
-        var projectDto = new CreateProjectDTO
-        {
-            Title = "VetApp",
-            Description = "Vet manager for schedule appointments.",
-            ReleaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
-            Version = 1,
-            AuthorId = Guid.NewGuid(),
-            IsInDevelopment = true
-        };
-
-        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
-            async () => await _projectService.Create(projectDto, Guid.NewGuid()));
-
-        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _authorRepositoryMock.Verify(
             x => x.GetById(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -189,7 +163,6 @@ public class ProjectServiceTest
             Description = "Vet manager for schedule appointments.",
             ReleaseDate = new DateTimeOffset(2026, 06, 17, 0, 0, 0, TimeSpan.Zero),
             Version = 1,
-            AuthorId = authorId,
             IsInDevelopment = true
         };
 
@@ -217,7 +190,6 @@ public class ProjectServiceTest
             Description = "Vet manager for schedule appointments.",
             ReleaseDate = releaseDate,
             Version = 1,
-            AuthorId = authorId,
             IsInDevelopment = true
         };
 
@@ -255,7 +227,7 @@ public class ProjectServiceTest
             Assert.That(createdProjectArgument.Description, Is.EqualTo(projectDto.Description));
             Assert.That(createdProjectArgument.ReleaseDate, Is.EqualTo(projectDto.ReleaseDate));
             Assert.That(createdProjectArgument.Version, Is.EqualTo(projectDto.Version));
-            Assert.That(createdProjectArgument.AuthorId, Is.EqualTo(projectDto.AuthorId));
+            Assert.That(createdProjectArgument.AuthorId, Is.EqualTo(authorId));
             Assert.That(createdProjectArgument.IsInDevelopment, Is.EqualTo(projectDto.IsInDevelopment));
             Assert.That(result.Id, Is.EqualTo(persistedProject.Id));
             Assert.That(result.AuthorId, Is.EqualTo(authorId));

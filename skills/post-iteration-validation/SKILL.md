@@ -46,7 +46,6 @@ dotnet test .\PortfolioWeb.Application.Tests\PortfolioWeb.Application.Tests.cspr
 
 Swap the project path as needed:
 
-- `.\PortfolioWeb.Core.Contracts.Tests\PortfolioWeb.Core.Contracts.Tests.csproj`
 - `.\PortfolioWeb.Infrastructure.Tests\PortfolioWeb.Infrastructure.Tests.csproj`
 - `.\PortfolioWeb.Api.Tests\PortfolioWeb.Api.Tests.csproj`
 
@@ -87,13 +86,12 @@ dotnet test .\PortfolioWeb.Application.Tests\PortfolioWeb.Application.Tests.cspr
 
 Swap the project path as needed:
 
-- `.\PortfolioWeb.Core.Contracts.Tests\PortfolioWeb.Core.Contracts.Tests.csproj`
 - `.\PortfolioWeb.Infrastructure.Tests\PortfolioWeb.Infrastructure.Tests.csproj`
 - `.\PortfolioWeb.Api.Tests\PortfolioWeb.Api.Tests.csproj`
 
 ### Full project coverage pass
 
-Run the four test projects one by one with the same coverage options rather than trying to invent a different flow.
+Run the three test projects one by one with the same coverage options rather than trying to invent a different flow.
 
 ### Current curated exclusions
 

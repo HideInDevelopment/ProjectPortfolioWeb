@@ -115,7 +115,7 @@ public class AuthorServiceTest
             .Callback<Author, CancellationToken>((author, _) => updatedAuthorArgument = author)
             .ReturnsAsync(persistedAuthor);
 
-        var result = await _authorService.Update(authorId, authorDto, authorId);
+        var result = await _authorService.Update(authorDto, authorId);
 
         Assert.That(updatedAuthorArgument, Is.Not.Null);
         Assert.Multiple(() =>
@@ -128,7 +128,7 @@ public class AuthorServiceTest
     }
 
     [Test]
-    public void Update_ShouldThrowInvalidAuthorIdException_WhenIdIsEmpty()
+    public void Update_ShouldThrowInvalidAuthorIdException_WhenCurrentAuthorIdIsEmpty()
     {
         var authorDto = new PersistAuthorDTO
         {
@@ -136,26 +136,9 @@ public class AuthorServiceTest
         };
 
         var exception = Assert.ThrowsAsync<InvalidAuthorIdException>(
-            async () => await _authorService.Update(Guid.Empty, authorDto, Guid.NewGuid()));
+            async () => await _authorService.Update(authorDto, Guid.Empty));
 
         Assert.That(exception!.Message, Is.EqualTo("The provided author id is not valid."));
-        _authorRepositoryMock.Verify(
-            x => x.Update(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Test]
-    public void Update_ShouldThrowForbiddenResourceAccessException_WhenCurrentAuthorDoesNotOwnResource()
-    {
-        var authorDto = new PersistAuthorDTO
-        {
-            Name = "Updated Name"
-        };
-
-        var exception = Assert.ThrowsAsync<ForbiddenResourceAccessException>(
-            async () => await _authorService.Update(Guid.NewGuid(), authorDto, Guid.NewGuid()));
-
-        Assert.That(exception!.Message, Is.EqualTo("The current user is not allowed to access this resource."));
         _authorRepositoryMock.Verify(
             x => x.Update(It.IsAny<Author>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -175,7 +158,7 @@ public class AuthorServiceTest
             .ReturnsAsync((Author?)null);
 
         var exception = Assert.ThrowsAsync<AuthorNotFoundException>(
-            async () => await _authorService.Update(authorId, authorDto, authorId));
+            async () => await _authorService.Update(authorDto, authorId));
 
         Assert.That(exception!.Message, Is.EqualTo($"The author with id '{authorId}' was not found."));
     }

@@ -46,29 +46,23 @@ public class ProjectService(
 
     public async Task<ProjectDTO> Create(CreateProjectDTO projectDto, Guid currentAuthorId, CancellationToken cancellationToken = default)
     {
-        if (projectDto.AuthorId == Guid.Empty)
+        if (currentAuthorId == Guid.Empty)
         {
             logger.ProjectCreationRejectedBecauseAuthorIdIsEmpty();
             throw new InvalidAuthorIdException();
         }
 
-        if (currentAuthorId != projectDto.AuthorId)
-        {
-            logger.ProjectCreationRejectedBecauseResourceIsForbidden(currentAuthorId, projectDto.AuthorId);
-            throw new ForbiddenResourceAccessException();
-        }
+        logger.CreatingProject(currentAuthorId, projectDto.Title, projectDto.Version);
 
-        logger.CreatingProject(projectDto.AuthorId, projectDto.Title, projectDto.Version);
-
-        var author = await authorRepository.GetById(projectDto.AuthorId, cancellationToken);
+        var author = await authorRepository.GetById(currentAuthorId, cancellationToken);
 
         if (author is null)
         {
-            logger.ProjectCreationRejectedBecauseReferencedAuthorWasNotFound(projectDto.AuthorId);
-            throw new ReferencedAuthorNotFoundException(projectDto.AuthorId);
+            logger.ProjectCreationRejectedBecauseReferencedAuthorWasNotFound(currentAuthorId);
+            throw new ReferencedAuthorNotFoundException(currentAuthorId);
         }
 
-        var project = ProjectMapper.MapToEntity(projectDto);
+        var project = ProjectMapper.MapToEntity(projectDto, currentAuthorId);
         var createdProject = await projectRepository.Create(project, cancellationToken);
 
         logger.ProjectCreatedSuccessfully(createdProject.Id, createdProject.AuthorId);

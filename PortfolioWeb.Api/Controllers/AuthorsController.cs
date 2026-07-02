@@ -21,8 +21,8 @@ public class AuthorsController(
         Ok(await authorService.GetById(id, cancellationToken));
 
     [Authorize]
-    [HttpPut("{id:guid}")]
-    public async Task<ActionResult<AuthorDTO>> Update(Guid id, [FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
+    [HttpPut]
+    public async Task<ActionResult<AuthorDTO>> Update([FromBody] PersistAuthorDTO authorDto, CancellationToken cancellationToken)
     {
         if (!User.TryGetEmail(out var email))
         {
@@ -36,7 +36,7 @@ public class AuthorsController(
             return Unauthorized();
         }
 
-        var updatedAuthor = await authorService.Update(id, authorDto, currentAuthorId, cancellationToken);
+        var updatedAuthor = await authorService.Update(authorDto, currentAuthorId, cancellationToken);
 
         return Ok(updatedAuthor);
     }

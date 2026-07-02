@@ -19,7 +19,5 @@ public class CreateProjectDTO
 
     public int Version { get; set; }
 
-    public Guid AuthorId { get; set; }
-
     public bool IsInDevelopment { get; set; }
 }

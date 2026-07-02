@@ -83,9 +83,8 @@ dotnet ef database update --project PortfolioWeb.Infrastructure --startup-projec
 - Coverage runs must use [coverage.runsettings](/C:/Users/manue/Repositories/PortfolioWeb/PortfolioWeb/coverage.runsettings) so the exclusion policy is stable and explicit.
 - Test order in that script:
   1. `PortfolioWeb.Application.Tests`
-  2. `PortfolioWeb.Core.Contracts.Tests`
-  3. `PortfolioWeb.Infrastructure.Tests`
-  4. `PortfolioWeb.Api.Tests`
+  2. `PortfolioWeb.Infrastructure.Tests`
+  3. `PortfolioWeb.Api.Tests`
 - Infrastructure tests use EF Core InMemory through `InMemoryDbContextFactory`.
 - API integration tests use `TestWebApplicationFactory` and force environment `Testing`.
 - The API test factory also clears logging providers to avoid Windows Event Log permission failures during test runs.

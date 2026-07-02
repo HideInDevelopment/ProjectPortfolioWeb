@@ -14,6 +14,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["ConnectionStrings:PortfolioWebDatabase"] = "Host=localhost;Port=5432;Database=portfolio_web_api_tests;Username=postgres;Password=postgres",
                 ["Authentication:Issuer"] = "PortfolioWeb",
                 ["Authentication:Audience"] = "PortfolioWebClient",
                 ["Authentication:SigningKey"] = "ThisIsATestSigningKeyWithEnoughLength123!",
