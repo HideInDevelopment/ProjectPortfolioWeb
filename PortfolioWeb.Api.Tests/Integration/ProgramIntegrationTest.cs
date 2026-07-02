@@ -554,7 +554,7 @@ public class ProgramIntegrationTest
         {
             Assert.That(
                 statusCodes,
-                Is.EquivalentTo(new[] { HttpStatusCode.Conflict, HttpStatusCode.OK }),
+                Is.EquivalentTo([HttpStatusCode.Conflict, HttpStatusCode.OK]),
                 $"Actual statuses: {string.Join(", ", statusCodes)}");
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Duplicate email"));
@@ -590,7 +590,7 @@ public class ProgramIntegrationTest
             "/api/auth/login",
             CreateJsonContent(new
             {
-                Email = firstUser.Email,
+                firstUser.Email,
                 Password = "password"
             }));
         var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
@@ -651,7 +651,7 @@ public class ProgramIntegrationTest
             "/api/auth/login",
             CreateJsonContent(new
             {
-                Email = firstUser.Email,
+                firstUser.Email,
                 Password = "password"
             }));
         var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
@@ -907,7 +907,7 @@ public class ProgramIntegrationTest
             Assert.That(problemDetails.Status, Is.EqualTo((int)HttpStatusCode.BadRequest));
             Assert.That(problemDetails.Detail, Is.EqualTo("One or more validation errors occurred."));
             Assert.That(problemDetails.Instance, Is.EqualTo("/api/Projects"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Title"));
+            Assert.That(problemDetails.Errors, Contains.Key("Title"));
             Assert.That(problemDetails.Errors["Title"], Has.Some.Contains("between 1 and 200"));
         });
     }
@@ -937,7 +937,7 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Description"));
+            Assert.That(problemDetails.Errors, Contains.Key("Description"));
             Assert.That(problemDetails.Errors["Description"], Is.Not.Empty);
         });
     }
@@ -967,7 +967,7 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
-            Assert.That(problemDetails!.Errors, Contains.Key("$.ReleaseDate"));
+            Assert.That(problemDetails.Errors, Contains.Key("$.ReleaseDate"));
             Assert.That(problemDetails.Errors["$.ReleaseDate"], Has.Some.Contains("not a valid date"));
         });
     }
@@ -1054,7 +1054,7 @@ public class ProgramIntegrationTest
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Title"));
+            Assert.That(problemDetails.Errors, Contains.Key("Title"));
             Assert.That(problemDetails.Errors["Title"], Is.Not.Empty);
         });
     }
@@ -1210,7 +1210,7 @@ public class ProgramIntegrationTest
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
             Assert.That(problemDetails.Instance, Is.EqualTo("/api/auth/register"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Email"));
+            Assert.That(problemDetails.Errors, Contains.Key("Email"));
             Assert.That(problemDetails.Errors["Email"], Is.Not.Empty);
         });
     }
@@ -1285,7 +1285,7 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Name"));
+            Assert.That(problemDetails.Errors, Contains.Key("Name"));
             Assert.That(problemDetails.Errors["Name"], Is.Not.Empty);
         });
     }
@@ -1311,7 +1311,7 @@ public class ProgramIntegrationTest
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Title, Is.EqualTo("Validation failed"));
-            Assert.That(problemDetails!.Errors, Contains.Key("Password"));
+            Assert.That(problemDetails.Errors, Contains.Key("Password"));
             Assert.That(problemDetails.Errors["Password"], Is.Not.Empty);
         });
     }
@@ -1693,18 +1693,18 @@ public class ProgramIntegrationTest
 
     private class ProblemDetailsResponse
     {
-        public int? Status { get; set; }
+        public int? Status { get; init; }
 
-        public string Title { get; set; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
 
-        public string Detail { get; set; } = string.Empty;
+        public string Detail { get; init; } = string.Empty;
 
-        public string Instance { get; set; } = string.Empty;
+        public string Instance { get; init; } = string.Empty;
     }
 
     private sealed class ValidationProblemDetailsResponse : ProblemDetailsResponse
     {
-        public Dictionary<string, string[]> Errors { get; set; } = [];
+        public Dictionary<string, string[]> Errors { get; init; } = [];
     }
 
     private static IEnumerable<TestCaseData> AuthorExceptionMappings()

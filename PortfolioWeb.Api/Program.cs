@@ -73,7 +73,7 @@ builder.Services.AddOpenApi(options =>
         operation.Security ??= [];
         operation.Security.Add(new OpenApiSecurityRequirement
         {
-            [new OpenApiSecuritySchemeReference("Bearer", context.Document, null)] = []
+            [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
         });
 
         return Task.CompletedTask;

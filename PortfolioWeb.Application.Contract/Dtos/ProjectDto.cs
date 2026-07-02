@@ -5,19 +5,19 @@ namespace PortfolioWeb.Application.Contract.Dtos;
 
 public class ProjectDto
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
 
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
 
     [JsonConverter(typeof(FlexibleDateTimeOffsetJsonConverter))]
-    public DateTimeOffset ReleaseDate { get; set; }
+    public DateTimeOffset ReleaseDate { get; init; }
 
-    public int Version { get; set; }
+    public int Version { get; init; }
 
-    public Guid AuthorId { get; set; }
+    public Guid AuthorId { get; init; }
 
-    public bool IsInDevelopment { get; set; }
+    public bool IsInDevelopment { get; init; }
 }
 

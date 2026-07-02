@@ -2,10 +2,10 @@ namespace PortfolioWeb.Application.Contract.Dtos;
 
 public class AuthorDto
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
 
-    public List<ProjectDto> Projects { get; set; } = [];
+    public List<ProjectDto> Projects { get; init; } = [];
 }
 

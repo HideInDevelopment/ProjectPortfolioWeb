@@ -55,13 +55,14 @@ public class AuthService(
         {
             var conflictingUser = await userRepository.GetByEmail(normalizedEmail, cancellationToken);
 
-            if (conflictingUser is not null)
+            if (conflictingUser is null)
             {
-                logger.RegistrationRejectedBecauseEmailAlreadyExists(normalizedEmail);
-                throw new DuplicateEmailException(normalizedEmail);
+                throw;
             }
+            
+            logger.RegistrationRejectedBecauseEmailAlreadyExists(normalizedEmail);
+            throw new DuplicateEmailException(normalizedEmail);
 
-            throw;
         }
 
         logger.UserRegisteredSuccessfully(createdUser.Id, createdUser.Author.Id);
@@ -124,51 +125,54 @@ public class AuthService(
 
     private static string NormalizeRequiredEmail(string email, ILogger logger, bool isRegistration)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            if (isRegistration)
-            {
-                logger.RegistrationRejectedBecauseEmailIsEmpty();
-            }
-            else
-            {
-                logger.LoginRejectedBecauseEmailIsEmpty();
-            }
-
-            throw new InvalidAuthRequestException("Email is required.");
+            return email.Trim().ToLowerInvariant();
+        }
+        
+        if (isRegistration)
+        {
+            logger.RegistrationRejectedBecauseEmailIsEmpty();
+        }
+        else
+        {
+            logger.LoginRejectedBecauseEmailIsEmpty();
         }
 
-        return email.Trim().ToLowerInvariant();
+        throw new InvalidAuthRequestException("Email is required.");
+
     }
 
     private static string NormalizeRequiredPassword(string password, ILogger logger, bool isRegistration)
     {
-        if (string.IsNullOrWhiteSpace(password))
+        if (!string.IsNullOrWhiteSpace(password))
         {
-            if (isRegistration)
-            {
-                logger.RegistrationRejectedBecausePasswordIsEmpty();
-            }
-            else
-            {
-                logger.LoginRejectedBecausePasswordIsEmpty();
-            }
-
-            throw new InvalidAuthRequestException("Password is required.");
+            return password;
+        }
+        
+        if (isRegistration)
+        {
+            logger.RegistrationRejectedBecausePasswordIsEmpty();
+        }
+        else
+        {
+            logger.LoginRejectedBecausePasswordIsEmpty();
         }
 
-        return password;
+        throw new InvalidAuthRequestException("Password is required.");
+
     }
 
     private static string NormalizeRequiredAuthorName(string authorName, ILogger logger)
     {
-        if (string.IsNullOrWhiteSpace(authorName))
+        if (!string.IsNullOrWhiteSpace(authorName))
         {
-            logger.RegistrationRejectedBecauseAuthorNameIsEmpty();
-            throw new InvalidAuthRequestException("Author name is required.");
+            return authorName.Trim();
         }
+        
+        logger.RegistrationRejectedBecauseAuthorNameIsEmpty();
+        throw new InvalidAuthRequestException("Author name is required.");
 
-        return authorName.Trim();
     }
 }
 

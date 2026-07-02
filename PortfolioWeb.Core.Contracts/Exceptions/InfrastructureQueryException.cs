@@ -2,10 +2,6 @@ namespace PortfolioWeb.Core.Contracts.Exceptions;
 
 public class InfrastructureQueryException : InfrastructureException
 {
-    public InfrastructureQueryException()
-    {
-    }
-
     public InfrastructureQueryException(string message) : base(message)
     {
     }

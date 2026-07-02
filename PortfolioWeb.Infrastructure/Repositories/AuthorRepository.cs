@@ -53,29 +53,6 @@ public class AuthorRepository(PortfolioWebDbContext dbContext) : IAuthorReposito
         }
     }
 
-    public async Task<Author> Create(Author author, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await dbContext.Authors.AddAsync(author, cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            return author;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception) when (ExceptionClassifier.IsConnectionException(exception))
-        {
-            throw new InfrastructureConnectionException("An error occurred while connecting to the database to create the author.", exception);
-        }
-        catch (Exception exception) when (ExceptionClassifier.IsPersistenceException(exception))
-        {
-            throw new InfrastructurePersistenceException("An error occurred while saving the author in the database.", exception);
-        }
-    }
-
     public async Task<Author?> Update(Author author, CancellationToken cancellationToken = default)
     {
         Author? existingAuthor;

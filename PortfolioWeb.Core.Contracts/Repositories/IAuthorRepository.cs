@@ -8,8 +8,6 @@ public interface IAuthorRepository
 
     Task<List<Author>> GetAll(CancellationToken cancellationToken = default);
 
-    Task<Author> Create(Author author, CancellationToken cancellationToken = default);
-
     Task<Author?> Update(Author author, CancellationToken cancellationToken = default);
 
     Task Delete(Author author, CancellationToken cancellationToken = default);

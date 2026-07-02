@@ -205,7 +205,7 @@ public class ProjectRepositoryTest
         await context.SaveChangesAsync();
 
         using var cancellationTokenSource = new CancellationTokenSource();
-        cancellationTokenSource.Cancel();
+        await cancellationTokenSource.CancelAsync();
 
         Assert.That(
             async () => await repository.Delete(project, cancellationTokenSource.Token),

@@ -109,11 +109,19 @@ public class GlobalExceptionHandlerTest
     {
         var logger = new TestLogger<GlobalExceptionHandler>();
         var handler = new GlobalExceptionHandler(logger);
-        var httpContext = new DefaultHttpContext();
-        httpContext.TraceIdentifier = "trace-id";
-        httpContext.Request.Method = HttpMethods.Get;
-        httpContext.Request.Path = "/api/test";
-        httpContext.Response.Body = new MemoryStream();
+        var httpContext = new DefaultHttpContext
+        {
+            TraceIdentifier = "trace-id",
+            Request =
+            {
+                Method = HttpMethods.Get,
+                Path = "/api/test"
+            },
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
 
         var result = await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
 
@@ -157,20 +165,20 @@ public class GlobalExceptionHandlerTest
             Exception? exception,
             Func<TState, Exception?, string> formatter)
         {
-            Entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
+            Entries.Add(new LogEntry(logLevel, exception));
         }
     }
 
-    private sealed record LogEntry(LogLevel LogLevel, string Message, Exception? Exception);
+    private sealed record LogEntry(LogLevel LogLevel, Exception? Exception);
 
     private sealed class ProblemDetailsResponse
     {
-        public int? Status { get; set; }
+        public int? Status { get; init; }
 
-        public string Title { get; set; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
 
-        public string Detail { get; set; } = string.Empty;
+        public string Detail { get; init; } = string.Empty;
 
-        public string Instance { get; set; } = string.Empty;
+        public string Instance { get; init; } = string.Empty;
     }
 }

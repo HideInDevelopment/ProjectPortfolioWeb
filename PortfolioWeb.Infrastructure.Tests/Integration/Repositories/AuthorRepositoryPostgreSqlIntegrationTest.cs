@@ -22,25 +22,6 @@ public class AuthorRepositoryPostgreSqlIntegrationTest
     }
 
     [Test]
-    public async Task Create_ShouldPersistAuthorInPostgreSql()
-    {
-        await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);
-        var repository = new AuthorRepository(context);
-        var author = CreateAuthor(Guid.NewGuid(), "Manuel");
-
-        var result = await repository.Create(author);
-
-        await using var verificationContext = PostgreSqlDbContextFactory.Create(DatabaseName);
-        var persistedAuthor = await verificationContext.Authors.SingleAsync(x => x.Id == author.Id);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Is.SameAs(author));
-            Assert.That(persistedAuthor.Name, Is.EqualTo("Manuel"));
-        });
-    }
-
-    [Test]
     public async Task GetById_ShouldReturnAuthorWithProjectsFromPostgreSql()
     {
         await using var context = PostgreSqlDbContextFactory.Create(DatabaseName);

@@ -35,16 +35,13 @@ public class FlexibleDateTimeOffsetJsonConverter : JsonConverter<DateTimeOffset>
             return exactDate;
         }
 
-        if (DateTimeOffset.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal,
-                out var parsedDate))
-        {
-            return parsedDate;
-        }
-
-        throw new JsonException($"releaseDate '{value}' is not a valid date.");
+        return DateTimeOffset.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var parsedDate) 
+            ? parsedDate 
+            : throw new JsonException($"releaseDate '{value}' is not a valid date.");
     }
 
     public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)

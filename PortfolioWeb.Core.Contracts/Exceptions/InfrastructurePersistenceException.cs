@@ -2,10 +2,6 @@ namespace PortfolioWeb.Core.Contracts.Exceptions;
 
 public class InfrastructurePersistenceException : InfrastructureException
 {
-    public InfrastructurePersistenceException()
-    {
-    }
-
     public InfrastructurePersistenceException(string message) : base(message)
     {
     }

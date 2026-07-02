@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace PortfolioWeb.Api.ExceptionHandling;
 
 internal static partial class GlobalExceptionHandlerLogMessages

@@ -91,39 +91,6 @@ public class AuthorRepositoryTest
     }
 
     [Test]
-    public async Task Create_ShouldPersistAuthorAndReturnIt()
-    {
-        await using var context = InMemoryDbContextFactory.Create();
-        var repository = new AuthorRepository(context);
-        var authorId = Guid.NewGuid();
-        var author = CreateAuthor(authorId, "Manuel");
-
-        var result = await repository.Create(author);
-        var persistedAuthor = await context.Authors.FindAsync(authorId);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Is.SameAs(author));
-            Assert.That(persistedAuthor, Is.Not.Null);
-            Assert.That(persistedAuthor!.Name, Is.EqualTo("Manuel"));
-        });
-    }
-
-    [Test]
-    public void Create_ShouldThrowOperationCanceledException_WhenCancellationIsRequested()
-    {
-        using var context = InMemoryDbContextFactory.Create();
-        var repository = new AuthorRepository(context);
-        var author = CreateAuthor(Guid.NewGuid(), "Manuel");
-        using var cancellationTokenSource = new CancellationTokenSource();
-        cancellationTokenSource.Cancel();
-
-        Assert.That(
-            async () => await repository.Create(author, cancellationTokenSource.Token),
-            Throws.InstanceOf<OperationCanceledException>());
-    }
-
-    [Test]
     public async Task Update_ShouldPersistUpdatedValues_WhenAuthorExists()
     {
         await using var context = InMemoryDbContextFactory.Create();
@@ -218,7 +185,7 @@ public class AuthorRepositoryTest
         await context.SaveChangesAsync();
 
         using var cancellationTokenSource = new CancellationTokenSource();
-        cancellationTokenSource.Cancel();
+        await cancellationTokenSource.CancelAsync();
 
         Assert.That(
             async () => await repository.Delete(author, cancellationTokenSource.Token),

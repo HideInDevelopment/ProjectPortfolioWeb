@@ -23,13 +23,14 @@ public class AuthorService(
 
         var author = await authorRepository.GetById(id, cancellationToken);
 
-        if (author is null)
+        if (author is not null)
         {
-            logger.AuthorNotFoundDuringRetrieval(id);
-            throw new AuthorNotFoundException(id);
+            return AuthorMapper.MapToDto(author);
         }
+        
+        logger.AuthorNotFoundDuringRetrieval(id);
+        throw new AuthorNotFoundException(id);
 
-        return AuthorMapper.MapToDto(author);
     }
 
     public async Task<List<AuthorDto>> GetAll(CancellationToken cancellationToken = default)
