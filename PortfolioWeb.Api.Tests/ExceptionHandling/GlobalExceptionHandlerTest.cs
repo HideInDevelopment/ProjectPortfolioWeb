@@ -17,71 +17,85 @@ public class GlobalExceptionHandlerTest
             new InvalidAuthRequestException("invalid auth request"),
             StatusCodes.Status400BadRequest,
             "Invalid auth request",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new ForbiddenResourceAccessException(),
             StatusCodes.Status403Forbidden,
             "Forbidden resource access",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new InvalidAuthorIdException(),
             StatusCodes.Status400BadRequest,
             "Invalid author id",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new DuplicateEmailException("manuel@portfolio.local"),
             StatusCodes.Status409Conflict,
             "Duplicate email",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new InvalidCredentialsException(),
             StatusCodes.Status401Unauthorized,
             "Invalid credentials",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new InactiveUserException(),
             StatusCodes.Status403Forbidden,
             "Inactive user",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new InvalidProjectIdException(),
             StatusCodes.Status400BadRequest,
             "Invalid project id",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new ReferencedAuthorNotFoundException(Guid.NewGuid()),
             StatusCodes.Status400BadRequest,
             "Referenced author not found",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new AuthorNotFoundException(Guid.NewGuid()),
             StatusCodes.Status404NotFound,
             "Author not found",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new ProjectNotFoundException(Guid.NewGuid()),
             StatusCodes.Status404NotFound,
             "Project not found",
+            string.Empty,
             LogLevel.Warning);
         yield return new TestCaseData(
             new InfrastructureConnectionException("connection failed"),
             StatusCodes.Status503ServiceUnavailable,
             "Database unavailable",
+            "A required backend dependency is currently unavailable.",
             LogLevel.Error);
         yield return new TestCaseData(
             new InfrastructureQueryException("query failed"),
             StatusCodes.Status500InternalServerError,
             "Database query error",
+            "The server could not complete the request.",
             LogLevel.Error);
         yield return new TestCaseData(
             new InfrastructurePersistenceException("persistence failed"),
             StatusCodes.Status500InternalServerError,
             "Database persistence error",
+            "The server could not complete the request.",
             LogLevel.Error);
         yield return new TestCaseData(
             new Exception("unexpected failure"),
             StatusCodes.Status500InternalServerError,
             "Internal Server Error",
+            "An unexpected error occurred.",
             LogLevel.Error);
     }
 
@@ -90,6 +104,7 @@ public class GlobalExceptionHandlerTest
         Exception exception,
         int expectedStatusCode,
         string expectedTitle,
+        string expectedDetail,
         LogLevel expectedLogLevel)
     {
         var logger = new TestLogger<GlobalExceptionHandler>();
@@ -119,7 +134,7 @@ public class GlobalExceptionHandlerTest
             Assert.That(problemDetails, Is.Not.Null);
             Assert.That(problemDetails!.Status, Is.EqualTo(expectedStatusCode));
             Assert.That(problemDetails.Title, Is.EqualTo(expectedTitle));
-            Assert.That(problemDetails.Detail, Is.EqualTo(exception.Message));
+            Assert.That(problemDetails.Detail, Is.EqualTo(expectedLogLevel == LogLevel.Error ? expectedDetail : exception.Message));
             Assert.That(problemDetails.Instance, Is.EqualTo("/api/test"));
             Assert.That(logger.Entries, Has.Count.EqualTo(1));
             Assert.That(logger.Entries[0].LogLevel, Is.EqualTo(expectedLogLevel));

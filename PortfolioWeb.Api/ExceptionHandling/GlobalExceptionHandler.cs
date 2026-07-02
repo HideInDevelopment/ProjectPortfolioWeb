@@ -35,35 +35,35 @@ public class GlobalExceptionHandler(
 
     private static ProblemDetails CreateProblemDetails(HttpContext httpContext, Exception exception)
     {
-        var (statusCode, title) = MapException(exception);
+        var (statusCode, title, detail) = MapException(exception);
 
         return new ProblemDetails
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message,
+            Detail = detail,
             Instance = httpContext.Request.Path
         };
     }
 
-    private static (int StatusCode, string Title) MapException(Exception exception)
+    private static (int StatusCode, string Title, string Detail) MapException(Exception exception)
     {
         return exception switch
         {
-            InvalidAuthRequestException => (StatusCodes.Status400BadRequest, "Invalid auth request"),
-            ForbiddenResourceAccessException => (StatusCodes.Status403Forbidden, "Forbidden resource access"),
-            InvalidAuthorIdException => (StatusCodes.Status400BadRequest, "Invalid author id"),
-            DuplicateEmailException => (StatusCodes.Status409Conflict, "Duplicate email"),
-            InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
-            InactiveUserException => (StatusCodes.Status403Forbidden, "Inactive user"),
-            InvalidProjectIdException => (StatusCodes.Status400BadRequest, "Invalid project id"),
-            ReferencedAuthorNotFoundException => (StatusCodes.Status400BadRequest, "Referenced author not found"),
-            AuthorNotFoundException => (StatusCodes.Status404NotFound, "Author not found"),
-            ProjectNotFoundException => (StatusCodes.Status404NotFound, "Project not found"),
-            InfrastructureConnectionException => (StatusCodes.Status503ServiceUnavailable, "Database unavailable"),
-            InfrastructureQueryException => (StatusCodes.Status500InternalServerError, "Database query error"),
-            InfrastructurePersistenceException => (StatusCodes.Status500InternalServerError, "Database persistence error"),
-            _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+            InvalidAuthRequestException => (StatusCodes.Status400BadRequest, "Invalid auth request", exception.Message),
+            ForbiddenResourceAccessException => (StatusCodes.Status403Forbidden, "Forbidden resource access", exception.Message),
+            InvalidAuthorIdException => (StatusCodes.Status400BadRequest, "Invalid author id", exception.Message),
+            DuplicateEmailException => (StatusCodes.Status409Conflict, "Duplicate email", exception.Message),
+            InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials", exception.Message),
+            InactiveUserException => (StatusCodes.Status403Forbidden, "Inactive user", exception.Message),
+            InvalidProjectIdException => (StatusCodes.Status400BadRequest, "Invalid project id", exception.Message),
+            ReferencedAuthorNotFoundException => (StatusCodes.Status400BadRequest, "Referenced author not found", exception.Message),
+            AuthorNotFoundException => (StatusCodes.Status404NotFound, "Author not found", exception.Message),
+            ProjectNotFoundException => (StatusCodes.Status404NotFound, "Project not found", exception.Message),
+            InfrastructureConnectionException => (StatusCodes.Status503ServiceUnavailable, "Database unavailable", "A required backend dependency is currently unavailable."),
+            InfrastructureQueryException => (StatusCodes.Status500InternalServerError, "Database query error", "The server could not complete the request."),
+            InfrastructurePersistenceException => (StatusCodes.Status500InternalServerError, "Database persistence error", "The server could not complete the request."),
+            _ => (StatusCodes.Status500InternalServerError, "Internal Server Error", "An unexpected error occurred.")
         };
     }
 

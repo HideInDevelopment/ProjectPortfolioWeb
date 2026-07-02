@@ -34,3 +34,4 @@
 /PortfolioWeb.sln.DotSettings.user
 
 .docker
+.env

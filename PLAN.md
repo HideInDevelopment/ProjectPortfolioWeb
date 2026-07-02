@@ -1,137 +1,121 @@
 # PortfolioWeb Plan
 
-## Objetivo
-Construir un backend solido para PortfolioWeb que pueda:
+## Goal
+Build a solid backend for PortfolioWeb that can:
 
-- servir como MVP real
-- desplegarse con seguridad razonable
-- ser consumido mas adelante por un frontend
-- evolucionar despues hacia un modelo multiusuario
+- serve as a real MVP
+- be deployed with reasonable security
+- be consumed later by a frontend
+- evolve afterwards into a multi-user model
 
-## Estado actual
+## Current status
 
-### Completado
-- [x] Estructura base de la solucion en proyectos separados:
+### Completed
+- [x] Base solution structure split into separate projects:
   - `Domain`
   - `Core.Contracts`
   - `Application.Contract`
   - `Application`
   - `Infrastructure`
   - `Api`
-  - proyectos de test por capa
-- [x] Modelo de dominio inicial con `Author` y `Project`
-- [x] Relacion `Author 1:N Project`
-- [x] Persistencia con EF Core + PostgreSQL
-- [x] Configuracion de entidades y migracion inicial
-- [x] CRUD basico para `Author` y `Project`
-- [x] DTOs, mappers manuales y services
-- [x] Endpoints CRUD en la API
+  - test projects by layer
+- [x] Initial domain model with `Author` and `Project`
+- [x] `Author 1:N Project` relationship
+- [x] Persistence with EF Core + PostgreSQL
+- [x] Entity configuration and initial migration
+- [x] Basic CRUD for `Author` and `Project`
+- [x] DTOs, manual mappers, and services
+- [x] CRUD endpoints in the API
 - [x] OpenAPI + Scalar
-- [x] Autoaplicacion de migraciones al arrancar la API fuera de entorno `Testing`
-- [x] Dockerizacion de la API y de PostgreSQL
-- [x] Manejo inicial de excepciones:
-  - validaciones funcionales en servicios
-  - excepciones de aplicacion
-  - excepciones de infraestructura
-  - traduccion HTTP centralizada en `GlobalExceptionHandler`
-- [x] Endurecimiento final de la API:
-  - validacion explicita de DTOs de entrada en el borde HTTP
-  - respuestas de validacion homogeneas con `ValidationProblemDetails`
-  - validaciones previas a persistencia para longitudes, formato de email, `Version` y `ReleaseDate`
-  - contratos de error mas estables para consumo desde frontend
-- [x] Logging estructurado en `Application` y `Api`
-- [x] Suite automatizada inicial:
-  - tests de `Application`
-  - tests de `Infrastructure` en happy path
-  - tests de `Api`
-- [x] Script de ejecucion secuencial de tests
-- [x] Hook opcional de `pre-push` preparado para validar tests antes de subir cambios
-- [x] Slice tecnica `User + Authentication + Authorization` cerrada:
-  - registro y login con credenciales locales
-  - hashing de password
+- [x] Automatic migration application when the API starts outside the `Testing` environment
+- [x] Dockerization of the API and PostgreSQL
+- [x] Initial exception handling:
+  - functional validations in services
+  - application exceptions
+  - infrastructure exceptions
+  - centralized HTTP translation in `GlobalExceptionHandler`
+- [x] Final API hardening:
+  - explicit validation of input DTOs at the HTTP edge
+  - homogeneous validation responses with `ValidationProblemDetails`
+  - pre-persistence validation for lengths, email format, `Version`, and `ReleaseDate`
+  - more stable error contracts for frontend consumption
+- [x] Structured logging in `Application` and `Api`
+- [x] Initial automated suite:
+  - `Application` tests
+  - `Infrastructure` tests on the happy path
+  - `Api` tests
+- [x] Sequential test execution script
+- [x] Optional `pre-push` hook prepared to validate tests before pushing changes
+- [x] Technical slice `User + Authentication + Authorization` completed:
+  - registration and login with local credentials
+  - password hashing
   - JWT bearer
-  - relacion `User 1:1 Author`
-  - ownership sobre escritura de `Author` y `Project`
-  - revalidacion de usuario activo en endpoints protegidos
-  - tests unitarios, de API e integracion sobre auth/authz
+  - `User 1:1 Author` relationship
+  - ownership over `Author` and `Project` write operations
+  - active user revalidation on protected endpoints
+  - unit, API, and integration tests around auth/authz
+- [x] Testing slice largely completed:
+  - unit tests in `Application`
+  - integration tests in `Infrastructure`, including real PostgreSQL coverage for critical paths
+  - API tests for contracts, validation, auth/authz, and visible error handling
+  - one full authenticated happy path under real HTTP
+  - destructive review of the suite performed
+  - testing strategy documented in ADR
 
-### En progreso funcionalmente, pero no cerrado del todo
-- [~] Testing
-  - la base esta montada y es util
-  - ya hay escenarios no felices relevantes en `Api` e `Infrastructure`
-  - ya hay integracion real contra PostgreSQL en `Infrastructure`
-  - falta decidir hasta donde compensa empujar mas cobertura en plumbing y glue code
+## Still pending before the MVP can be considered closed
 
-## Pendiente para considerar el MVP como cerrado
+### 1. Baseline security
+- [x] Define and apply the minimum required security for a deployable backend:
+  - secrets moved out of tracked Docker configuration into local `.env`
+  - startup validation for required auth and database configuration
+  - controlled error surface for infrastructure and unexpected failures
+  - OpenAPI and Scalar disabled by default outside local development/testing unless explicitly enabled
 
-### 1. Test automaticos con foco en fiabilidad
-- [x] Completar tests de escenarios negativos asumibles en `Infrastructure`
-- [x] Anadir tests de integracion con PostgreSQL real para los puntos criticos de persistencia
-- [x] Cubrir mejor validaciones y errores HTTP visibles desde controladores / handler global
-- [x] Cubrir auth/authz con:
-  - roundtrip real de JWT en endpoints protegidos
-  - ownership `403`
-  - usuario inactivo tras emitir token
-  - duplicado real de persistencia en registro
-- [x] Ejecutar revision destructiva manual de la suite completa para buscar falsos verdes y huecos de regresion
-- [x] Cubrir rechazo de JWT invalidos o expirados en endpoints protegidos
-- [x] Endurecer tests de validacion HTTP para comprobar errores por campo y no solo `400`
-- [ ] Decidir si compensa anadir un happy path autenticado full-stack con servicios y repositorios reales bajo HTTP
-- [ ] Dejar claro que parte del sistema queda protegida por unit tests y que parte por integration tests
+### 2. Technical slice `User + Authentication + Authorization`
+- [x] Completed
 
-### 2. Seguridad base
-- [ ] Definir y aplicar el minimo de seguridad exigible para un backend desplegable:
-  - secretos fuera del codigo
-  - configuracion segura por entorno
-  - superficie de error controlada
-  - revision de exposicion innecesaria en entornos no locales
+#### Delivered scope
+- [x] `User` entity with `1:1` relationship to `Author`
+- [x] Registration and login with `Email + PasswordHash`
+- [x] JWT bearer for authentication
+- [x] Combined `User + Author` creation
+- [x] Ownership over `Author` and `Project` write operations
+- [x] `IsActive` revalidation on protected endpoints
+- [x] Duplicate email translation both in pre-check and in real persistence
+- [x] Unit, API, and integration tests around auth/authz
 
-### 3. Slice tecnica `User + Authentication + Authorization`
-- [x] Completada
+#### Conscious decisions kept
+- [x] No refresh tokens in this phase
+- [x] No `Me` endpoint
+- [x] No complex roles
+- [x] Simple `Role` with initial value `User`
 
-#### Alcance entregado
-- [x] Entidad `User` con relacion `1:1` hacia `Author`
-- [x] Registro y login con `Email + PasswordHash`
-- [x] JWT bearer para autenticacion
-- [x] Alta conjunta `User + Author`
-- [x] Ownership sobre escritura de `Author` y `Project`
-- [x] Revalidacion de `IsActive` en endpoints protegidos
-- [x] Traduccion de duplicado de email tanto en pre-check como en persistencia real
-- [x] Tests unitarios, de API e integracion sobre auth/authz
+### 3. Exit criteria for deployment
+- [ ] Define a minimum reproducible deployment flow
+- [ ] Verify that the API container works with clean external configuration
+- [ ] Leave the migration strategy resolved for deployed environments
+- [ ] Add basic remote automation
+  - CI for build + test at minimum
 
-#### Decisiones conscientes mantenidas
-- [x] Sin refresh tokens en esta fase
-- [x] Sin endpoint `Me`
-- [x] Sin roles complejos
-- [x] `Role` simple con valor inicial `User`
+## Recommended execution order
+1. Apply baseline security linked to the authentication/authorization already implemented
+2. Close deployment criteria
 
-### 4. Criterio de salida a despliegue
-- [ ] Definir un flujo minimo de despliegue reproducible
-- [ ] Verificar que el contenedor de API funciona con configuracion externa limpia
-- [ ] Dejar resuelta la estrategia de migraciones para entorno desplegado
-- [ ] Anadir automatizacion remota basica
-  - CI de build + test como minimo
-
-## Orden recomendado de ejecucion
-1. Completar bateria de tests pendiente
-2. Aplicar seguridad base ligada a la autenticacion/autorizacion ya implementada
-3. Cerrar criterios de despliegue
-
-## Fuera de alcance por ahora
+## Out of scope for now
 - Frontend
-- endpoint `Me`
+- `Me` endpoint
 - refresh tokens
-- roles avanzados
-- funcionalidades avanzadas de multiusuario mas alla de la base de auth/authz
-- features no necesarias para exponer portfolio y proyectos
+- advanced roles
+- advanced multi-user features beyond the auth/authz baseline
+- features not needed to expose portfolio and projects
 
-## Definicion practica de MVP cerrado
-Consideraremos el MVP cerrado cuando se cumpla todo lo siguiente:
+## Practical definition of a closed MVP
+We will consider the MVP closed when all of the following are true:
 
-- CRUD de `Author` y `Project` estable
-- modelo `User 1:1 Author` implementado
-- registro y login operativos con JWT
-- autorizacion minima para proteger authors y projects propios
-- validaciones principales resueltas antes de persistencia
-- tests automaticos cubriendo happy path y casos negativos relevantes
-- despliegue reproducible con configuracion externa razonable
+- stable CRUD for `Author` and `Project`
+- `User 1:1 Author` model implemented
+- working registration and login with JWT
+- minimum authorization to protect owned authors and projects
+- main validations resolved before persistence
+- automated tests covering happy path and relevant negative cases
+- reproducible deployment with reasonable external configuration

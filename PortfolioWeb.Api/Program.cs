@@ -23,9 +23,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
             Status = StatusCodes.Status400BadRequest,
             Title = "Validation failed",
             Detail = "One or more validation errors occurred.",
-            Instance = context.HttpContext.Request.Path
+            Instance = context.HttpContext.Request.Path,
+            Extensions =
+            {
+                ["traceId"] = context.HttpContext.TraceIdentifier
+            }
         };
-        problemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
 
         return new BadRequestObjectResult(problemDetails)
         {
@@ -80,12 +83,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var issuer = builder.Configuration["Authentication:Issuer"]
-            ?? throw new InvalidOperationException("Authentication issuer is not configured.");
-        var audience = builder.Configuration["Authentication:Audience"]
-            ?? throw new InvalidOperationException("Authentication audience is not configured.");
-        var signingKey = builder.Configuration["Authentication:SigningKey"]
-            ?? throw new InvalidOperationException("Authentication signing key is not configured.");
+        var issuer = GetRequiredConfiguration(builder.Configuration, "Authentication:Issuer");
+        var audience = GetRequiredConfiguration(builder.Configuration, "Authentication:Audience");
+        var signingKey = GetRequiredConfiguration(builder.Configuration, "Authentication:SigningKey");
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -105,6 +105,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // TODO: Review and update EF Core packages when a newer patched version is adopted to remove this temporary transitive package pin.
 
 var app = builder.Build();
+ValidateSecurityConfiguration(app.Configuration);
 
 app.UseExceptionHandler();
 app.UseAuthentication();
@@ -122,10 +123,46 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-app.MapOpenApi();
-app.MapScalarApiReference("/scalar");
+if (app.Environment.IsDevelopment() ||
+    app.Environment.IsEnvironment("Testing") ||
+    app.Configuration.GetValue<bool>("Features:ExposeApiDocs"))
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference("/scalar");
+}
+
 app.MapControllers();
 
 app.Run();
 
-public partial class Program;
+static string GetRequiredConfiguration(IConfiguration configuration, string key)
+{
+    var value = configuration[key];
+
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        throw new InvalidOperationException($"{key} is not configured.");
+    }
+
+    return value;
+}
+
+static void ValidateSecurityConfiguration(IConfiguration configuration)
+{
+    _ = GetRequiredConfiguration(configuration, "ConnectionStrings:PortfolioWebDatabase");
+    _ = GetRequiredConfiguration(configuration, "Authentication:Issuer");
+    _ = GetRequiredConfiguration(configuration, "Authentication:Audience");
+    var signingKey = GetRequiredConfiguration(configuration, "Authentication:SigningKey");
+    var authenticationExpirationMinutes = GetRequiredConfiguration(configuration, "Authentication:ExpirationMinutes");
+
+    if (signingKey.Length < 32)
+    {
+        throw new InvalidOperationException("Authentication signing key must be at least 32 characters long.");
+    }
+
+    if (!int.TryParse(authenticationExpirationMinutes, out var parsedAuthenticationExpirationMinutes) ||
+        parsedAuthenticationExpirationMinutes <= 0)
+    {
+        throw new InvalidOperationException("Authentication expiration must be a positive integer.");
+    }
+}

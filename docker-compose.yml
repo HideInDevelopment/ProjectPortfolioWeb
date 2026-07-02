@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: portfolio_web
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -23,11 +23,11 @@ services:
     container_name: portfolio-web-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__PortfolioWebDatabase: Host=postgres;Port=5432;Database=portfolio_web;Username=postgres;Password=postgres
-      Authentication__Issuer: PortfolioWeb
-      Authentication__Audience: PortfolioWebClient
-      Authentication__SigningKey: ThisIsADockerDevelopmentSigningKey123456789
-      Authentication__ExpirationMinutes: 60
+      ConnectionStrings__PortfolioWebDatabase: Host=postgres;Port=5432;Database=portfolio_web;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Authentication__Issuer: ${AUTH_ISSUER}
+      Authentication__Audience: ${AUTH_AUDIENCE}
+      Authentication__SigningKey: ${AUTH_SIGNING_KEY}
+      Authentication__ExpirationMinutes: ${AUTH_EXPIRATION_MINUTES}
     ports:
       - "8080:8080"
     depends_on:

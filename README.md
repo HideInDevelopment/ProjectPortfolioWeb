@@ -11,6 +11,14 @@ PostgreSQL is the database choosen to store the data.
 The API is dockerized as the database as well. 
 
 ## Run With Docker
+Create a local `.env` file first. The quickest path is:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then adjust the secret values in `.env` before starting the containers.
+
 From the solution root, run:
 
 ```bash
@@ -22,6 +30,12 @@ This starts:
 - PostgreSQL on `localhost:5432`
 - The API on `http://localhost:8080`
 - Scalar on `http://localhost:8080/scalar`
+
+Security note:
+
+- `.env` is local and gitignored.
+- Docker secrets such as the PostgreSQL password and JWT signing key should stay there, not in tracked files.
+- OpenAPI and Scalar are exposed by default in local development and testing. In other environments they should stay disabled unless explicitly enabled through configuration.
 
 To stop the containers:
 

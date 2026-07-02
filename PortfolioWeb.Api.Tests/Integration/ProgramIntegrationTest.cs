@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -52,6 +54,29 @@ public class ProgramIntegrationTest
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/json"));
         });
+    }
+
+    [Test]
+    public async Task OpenApiEndpoint_ShouldBeUnavailableInProductionByDefault()
+    {
+        await EnsurePostgreSqlAvailableOrIgnoreAsync();
+
+        using var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Production");
+                builder.ConfigureAppConfiguration((_, configuration) =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["Features:ExposeApiDocs"] = "false"
+                    });
+                });
+            })
+            .CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -278,7 +303,7 @@ public class ProgramIntegrationTest
     }
 
     [Test]
-    public async Task Login_And_WriteEndpoints_ShouldPersistThroughRealServicesAndRepositories()
+    public async Task Register_Login_And_FullAuthenticatedFlow_ShouldPersistAndBeReadableThroughHttp()
     {
         using var client = _factory.CreateClient();
         var uniqueId = Guid.NewGuid().ToString("N");
@@ -288,19 +313,15 @@ public class ProgramIntegrationTest
         await EnsurePostgreSqlAvailableOrIgnoreAsync();
         await ResetApiTestDatabaseAsync();
 
-        var seededUser = CreatePersistedUser(
-            email,
-            authorName,
-            isActive: true,
-            passwordHash: HashForTests("password"));
-
-        using (var seedScope = _factory.Services.CreateScope())
-        {
-            var dbContext = seedScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
-            await dbContext.Database.MigrateAsync();
-            dbContext.Users.Add(seededUser);
-            await dbContext.SaveChangesAsync();
-        }
+        using var registerResponse = await client.PostAsync(
+            "/api/auth/register",
+            CreateJsonContent(new
+            {
+                Email = email,
+                Password = "password",
+                AuthorName = authorName
+            }));
+        var registerAuthResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
         using var loginResponse = await client.PostAsync(
             "/api/auth/login",
@@ -311,6 +332,8 @@ public class ProgramIntegrationTest
             }));
         var loginAuthResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
 
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(registerAuthResponse, Is.Not.Null);
         Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(loginAuthResponse, Is.Not.Null);
 
@@ -324,6 +347,12 @@ public class ProgramIntegrationTest
             }));
         var updatedAuthor = await updateAuthorResponse.Content.ReadFromJsonAsync<AuthorDto>();
 
+        if (updatedAuthor is null)
+        {
+            Assert.Fail("Expected updated author payload.");
+            return;
+        }
+
         using var createProjectResponse = await client.PostAsync(
             "/api/Projects",
             CreateJsonContent(new
@@ -336,28 +365,90 @@ public class ProgramIntegrationTest
             }));
         var createdProject = await createProjectResponse.Content.ReadFromJsonAsync<ProjectDto>();
 
+        if (createdProject is null)
+        {
+            Assert.Fail("Expected created project payload.");
+            return;
+        }
+
+        using var updateProjectResponse = await client.PutAsync(
+            $"/api/Projects/{createdProject.Id}",
+            CreateJsonContent(new
+            {
+                Title = "PortfolioWeb API",
+                Description = "Personal portfolio backend API.",
+                Version = 2,
+                IsInDevelopment = false
+            }));
+        var updatedProject = await updateProjectResponse.Content.ReadFromJsonAsync<ProjectDto>();
+
+        if (updatedProject is null)
+        {
+            Assert.Fail("Expected updated project payload.");
+            return;
+        }
+
+        using var getAuthorResponse = await client.GetAsync($"/api/Authors/{updatedAuthor.Id}");
+        var reloadedAuthor = await getAuthorResponse.Content.ReadFromJsonAsync<AuthorDto>();
+
+        if (reloadedAuthor is null)
+        {
+            Assert.Fail("Expected reloaded author payload.");
+            return;
+        }
+
+        using var getProjectResponse = await client.GetAsync($"/api/Projects/{createdProject.Id}");
+        var reloadedProject = await getProjectResponse.Content.ReadFromJsonAsync<ProjectDto>();
+
+        if (reloadedProject is null)
+        {
+            Assert.Fail("Expected reloaded project payload.");
+            return;
+        }
+
         Assert.Multiple(() =>
         {
+            Assert.That(registerResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/json"));
             Assert.That(updateAuthorResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(updatedAuthor, Is.Not.Null);
-            Assert.That(updatedAuthor!.Name, Is.EqualTo("Updated Manuel"));
+            Assert.That(updatedAuthor.Name, Is.EqualTo("Updated Manuel"));
             Assert.That(createProjectResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-            Assert.That(createdProject, Is.Not.Null);
-            Assert.That(createdProject!.AuthorId, Is.EqualTo(seededUser.Author.Id));
+            Assert.That(createdProject.AuthorId, Is.EqualTo(updatedAuthor.Id));
             Assert.That(createdProject.Title, Is.EqualTo("PortfolioWeb"));
+            Assert.That(updateProjectResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(updatedProject.Title, Is.EqualTo("PortfolioWeb API"));
+            Assert.That(updatedProject.Description, Is.EqualTo("Personal portfolio backend API."));
+            Assert.That(updatedProject.Version, Is.EqualTo(2));
+            Assert.That(updatedProject.IsInDevelopment, Is.False);
+            Assert.That(getAuthorResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(reloadedAuthor.Id, Is.EqualTo(updatedAuthor.Id));
+            Assert.That(reloadedAuthor.Name, Is.EqualTo("Updated Manuel"));
+            Assert.That(reloadedAuthor.Projects, Has.Count.EqualTo(1));
+            Assert.That(reloadedAuthor.Projects[0].Id, Is.EqualTo(createdProject.Id));
+            Assert.That(reloadedAuthor.Projects[0].Title, Is.EqualTo("PortfolioWeb API"));
+            Assert.That(getProjectResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(reloadedProject.Id, Is.EqualTo(createdProject.Id));
+            Assert.That(reloadedProject.AuthorId, Is.EqualTo(updatedAuthor.Id));
+            Assert.That(reloadedProject.Title, Is.EqualTo("PortfolioWeb API"));
+            Assert.That(reloadedProject.Description, Is.EqualTo("Personal portfolio backend API."));
+            Assert.That(reloadedProject.Version, Is.EqualTo(2));
+            Assert.That(reloadedProject.IsInDevelopment, Is.False);
         });
 
         using var verificationScope = _factory.Services.CreateScope();
         var verificationDbContext = verificationScope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
         var persistedAuthor = await verificationDbContext.Authors
             .Include(author => author.Projects)
-            .SingleAsync(author => author.Id == seededUser.Author.Id);
+            .SingleAsync(author => author.Id == updatedAuthor.Id);
 
         Assert.Multiple(() =>
         {
             Assert.That(persistedAuthor.Name, Is.EqualTo("Updated Manuel"));
             Assert.That(persistedAuthor.Projects, Has.Count.EqualTo(1));
-            Assert.That(persistedAuthor.Projects[0].Title, Is.EqualTo("PortfolioWeb"));
+            Assert.That(persistedAuthor.Projects[0].Id, Is.EqualTo(createdProject.Id));
+            Assert.That(persistedAuthor.Projects[0].Title, Is.EqualTo("PortfolioWeb API"));
+            Assert.That(persistedAuthor.Projects[0].Description, Is.EqualTo("Personal portfolio backend API."));
+            Assert.That(persistedAuthor.Projects[0].Version, Is.EqualTo(2));
+            Assert.That(persistedAuthor.Projects[0].IsInDevelopment, Is.False);
         });
     }
 
