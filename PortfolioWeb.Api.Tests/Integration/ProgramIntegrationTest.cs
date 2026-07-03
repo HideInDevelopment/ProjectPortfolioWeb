@@ -1821,11 +1821,7 @@ public class ProgramIntegrationTest
 
     private async Task EnsurePostgreSqlAvailableOrIgnoreAsync()
     {
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioWebDbContext>();
-        var connectionString = dbContext.Database.GetConnectionString()
-            ?? throw new InvalidOperationException("PostgreSQL connection string is not configured for API integration tests.");
-        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        var builder = new NpgsqlConnectionStringBuilder(TestWebApplicationFactory.PostgreSqlConnectionString)
         {
             Database = "postgres"
         };

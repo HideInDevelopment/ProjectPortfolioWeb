@@ -9,6 +9,7 @@ public class PortfolioWebDbContextFactoryTest
     public void CreateDbContext_ShouldReturnNpgsqlConfiguredContext_WhenApiProjectIsReachable()
     {
         var originalCurrentDirectory = Directory.GetCurrentDirectory();
+        var originalConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__PortfolioWebDatabase");
         var solutionRootPath = Path.GetFullPath(Path.Combine(
             TestContext.CurrentContext.TestDirectory,
             "..",
@@ -19,6 +20,9 @@ public class PortfolioWebDbContextFactoryTest
         try
         {
             Directory.SetCurrentDirectory(solutionRootPath);
+            Environment.SetEnvironmentVariable(
+                "ConnectionStrings__PortfolioWebDatabase",
+                "Host=localhost;Port=5432;Database=portfolio_web_dev;Username=postgres;Password=postgres");
             var factory = new PortfolioWebDbContextFactory();
 
             using var context = factory.CreateDbContext([]);
@@ -34,6 +38,7 @@ public class PortfolioWebDbContextFactoryTest
         }
         finally
         {
+            Environment.SetEnvironmentVariable("ConnectionStrings__PortfolioWebDatabase", originalConnectionString);
             Directory.SetCurrentDirectory(originalCurrentDirectory);
         }
     }

@@ -15,7 +15,9 @@ public class PortfolioWebDbContextFactory : IDesignTimeDbContextFactory<Portfoli
             .AddJsonFile("appsettings.Development.json", optional: true)
             .Build();
 
-        var connectionString = configuration.GetConnectionString("PortfolioWebDatabase");
+        var connectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__PortfolioWebDatabase") ??
+            configuration.GetConnectionString("PortfolioWebDatabase");
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
