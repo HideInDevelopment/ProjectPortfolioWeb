@@ -77,6 +77,7 @@ Build a solid backend for PortfolioWeb that can:
 #### Delivered scope
 - [x] `User` entity with `1:1` relationship to `Author`
 - [x] Registration and login with `Email + PasswordHash`
+- [x] Authenticated `Me` endpoint for frontend bootstrap
 - [x] JWT bearer for authentication
 - [x] Combined `User + Author` creation
 - [x] Ownership over `Author` and `Project` write operations
@@ -86,7 +87,6 @@ Build a solid backend for PortfolioWeb that can:
 
 #### Conscious decisions kept
 - [x] No refresh tokens in this phase
-- [x] No `Me` endpoint
 - [x] No complex roles
 - [x] Simple `Role` with initial value `User`
 
@@ -107,7 +107,6 @@ Build a solid backend for PortfolioWeb that can:
 
 ## Out of scope for now
 - Frontend
-- `Me` endpoint
 - refresh tokens
 - advanced roles
 - advanced multi-user features beyond the auth/authz baseline

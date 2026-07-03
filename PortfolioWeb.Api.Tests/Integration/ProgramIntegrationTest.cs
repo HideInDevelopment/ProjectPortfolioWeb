@@ -303,6 +303,60 @@ public class ProgramIntegrationTest
     }
 
     [Test]
+    public async Task Me_ShouldReturnCurrentAuthenticatedUser_WhenJwtIsValid()
+    {
+        var userRepository = new InMemoryUserRepository();
+        var user = CreatePersistedUser(Guid.NewGuid().ToString("N") + "@portfolio.local", "Manuel", true);
+        userRepository.AddUser(user);
+
+        using var client = CreateClientWithUserRepository(userRepository);
+        AuthenticateClient(client, CreateAccessToken(user.Author.Id, user.Email));
+
+        using var response = await client.GetAsync("/api/auth/me");
+        var currentUser = await response.Content.ReadFromJsonAsync<CurrentUserDto>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(currentUser, Is.Not.Null);
+            Assert.That(currentUser!.UserId, Is.EqualTo(user.Id));
+            Assert.That(currentUser.Email, Is.EqualTo(user.Email));
+            Assert.That(currentUser.Role, Is.EqualTo(UserRole.User.ToString()));
+            Assert.That(currentUser.AuthorId, Is.EqualTo(user.Author.Id));
+            Assert.That(currentUser.AuthorName, Is.EqualTo(user.Author.Name));
+        });
+    }
+
+    [Test]
+    public async Task Me_ShouldReturnUnauthorized_WhenRequestIsAnonymous()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/auth/me");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Me_ShouldReturnUnauthorized_WhenJwtDoesNotContainEmailClaim()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            CreateAccessTokenWithoutEmail(Guid.NewGuid()));
+
+        using var response = await client.GetAsync("/api/auth/me");
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(problemDetails, Is.Not.Null);
+            Assert.That(problemDetails!.Title, Is.EqualTo("Invalid credentials"));
+        });
+    }
+
+    [Test]
     public async Task Register_Login_And_FullAuthenticatedFlow_ShouldPersistAndBeReadableThroughHttp()
     {
         using var client = _factory.CreateClient();
@@ -1521,6 +1575,30 @@ public class ProgramIntegrationTest
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    private static string CreateAccessTokenWithoutEmail(Guid authorId)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
+            new("authorId", authorId.ToString()),
+            new(ClaimTypes.Role, "User")
+        };
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ThisIsATestSigningKeyWithEnoughLength123!")),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: "PortfolioWeb",
+            audience: "PortfolioWebClient",
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(60),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     private sealed class ThrowingAuthorService(Exception exception) : IAuthorService
     {
         public Task<AuthorDto> GetById(Guid id, CancellationToken cancellationToken = default) =>
@@ -1560,6 +1638,9 @@ public class ProgramIntegrationTest
             throw exception;
 
         public Task<AuthResponseDto> Login(LoginUserDto loginUserDto, CancellationToken cancellationToken = default) =>
+            throw exception;
+
+        public Task<CurrentUserDto> GetCurrentUser(string email, CancellationToken cancellationToken = default) =>
             throw exception;
 
         public Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default) =>

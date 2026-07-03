@@ -51,4 +51,10 @@ internal static partial class AuthServiceLogMessages
 
     [LoggerMessage(EventId = 3016, Level = LogLevel.Warning, Message = "Authenticated request rejected because the user is inactive. UserId: {UserId}")]
     public static partial void AuthenticatedRequestRejectedBecauseUserIsInactive(this ILogger logger, Guid userId);
+
+    [LoggerMessage(EventId = 3017, Level = LogLevel.Information, Message = "Retrieving current authenticated user. Email: {Email}")]
+    public static partial void RetrievingCurrentAuthenticatedUser(this ILogger logger, string email);
+
+    [LoggerMessage(EventId = 3018, Level = LogLevel.Information, Message = "Current authenticated user retrieved successfully. UserId: {UserId}, AuthorId: {AuthorId}")]
+    public static partial void CurrentAuthenticatedUserRetrievedSuccessfully(this ILogger logger, Guid userId, Guid authorId);
 }

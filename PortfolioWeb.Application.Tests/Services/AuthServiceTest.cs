@@ -317,6 +317,55 @@ public class AuthServiceTest
         Assert.That(exception!.Message, Is.EqualTo("The user account is inactive."));
     }
 
+    [Test]
+    public async Task GetCurrentUser_ShouldReturnCurrentUserDto_WhenUserExistsAndIsActive()
+    {
+        var user = CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), "manuel@portfolio.local", "Manuel", true);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var result = await _authService.GetCurrentUser("  Manuel@Portfolio.Local  ");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.UserId, Is.EqualTo(user.Id));
+            Assert.That(result.Email, Is.EqualTo("manuel@portfolio.local"));
+            Assert.That(result.Role, Is.EqualTo(UserRole.User.ToString()));
+            Assert.That(result.AuthorId, Is.EqualTo(user.Author.Id));
+            Assert.That(result.AuthorName, Is.EqualTo("Manuel"));
+        });
+    }
+
+    [Test]
+    public void GetCurrentUser_ShouldThrowInvalidCredentialsException_WhenUserDoesNotExist()
+    {
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        var exception = Assert.ThrowsAsync<InvalidCredentialsException>(async () =>
+            await _authService.GetCurrentUser("manuel@portfolio.local"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The provided credentials are not valid."));
+    }
+
+    [Test]
+    public void GetCurrentUser_ShouldThrowInactiveUserException_WhenUserIsInactive()
+    {
+        var user = CreateUserWithAuthor(Guid.NewGuid(), Guid.NewGuid(), "manuel@portfolio.local", "Manuel", false);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmail("manuel@portfolio.local", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var exception = Assert.ThrowsAsync<InactiveUserException>(async () =>
+            await _authService.GetCurrentUser("manuel@portfolio.local"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The user account is inactive."));
+    }
+
     private static User CreateUserWithAuthor(Guid userId, Guid authorId, string email, string authorName, bool isActive)
     {
         var user = new User(

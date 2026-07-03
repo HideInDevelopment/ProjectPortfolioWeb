@@ -102,25 +102,33 @@ public class AuthService(
         return JwtTokenFactory.Create(user, configuration);
     }
 
+    public async Task<CurrentUserDto> GetCurrentUser(string email, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        logger.RetrievingCurrentAuthenticatedUser(normalizedEmail);
+
+        var user = await GetRequiredActiveUserByEmail(normalizedEmail, cancellationToken);
+
+        logger.CurrentAuthenticatedUserRetrievedSuccessfully(user.Id, user.Author.Id);
+
+        return new CurrentUserDto
+        {
+            UserId = user.Id,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            AuthorId = user.Author.Id,
+            AuthorName = user.Author.Name
+        };
+    }
+
     public async Task EnsureCurrentUserIsActive(string email, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
 
         logger.ValidatingAuthenticatedUser(normalizedEmail);
 
-        var user = await userRepository.GetByEmail(normalizedEmail, cancellationToken);
-
-        if (user is null)
-        {
-            logger.AuthenticatedRequestRejectedBecauseUserWasNotFound(normalizedEmail);
-            throw new InvalidCredentialsException();
-        }
-
-        if (!user.IsActive)
-        {
-            logger.AuthenticatedRequestRejectedBecauseUserIsInactive(user.Id);
-            throw new InactiveUserException();
-        }
+        _ = await GetRequiredActiveUserByEmail(normalizedEmail, cancellationToken);
     }
 
     private static string NormalizeRequiredEmail(string email, ILogger logger, bool isRegistration)
@@ -174,5 +182,23 @@ public class AuthService(
         throw new InvalidAuthRequestException("Author name is required.");
 
     }
-}
 
+    private async Task<User> GetRequiredActiveUserByEmail(string normalizedEmail, CancellationToken cancellationToken)
+    {
+        var user = await userRepository.GetByEmail(normalizedEmail, cancellationToken);
+
+        if (user is null)
+        {
+            logger.AuthenticatedRequestRejectedBecauseUserWasNotFound(normalizedEmail);
+            throw new InvalidCredentialsException();
+        }
+
+        if (!user.IsActive)
+        {
+            logger.AuthenticatedRequestRejectedBecauseUserIsInactive(user.Id);
+            throw new InactiveUserException();
+        }
+
+        return user;
+    }
+}
