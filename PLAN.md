@@ -91,7 +91,7 @@ Build a solid backend for PortfolioWeb that can:
 - [x] Simple `Role` with initial value `User`
 
 ### 3. Exit criteria for deployment
-- [~] Deployment closure in progress
+- [x] Deployment closure completed
   - [x] API and PostgreSQL are dockerized
   - [x] local secret shape is defined through `.env.example`
   - [x] startup fails fast when critical configuration is missing or weak
@@ -99,11 +99,8 @@ Build a solid backend for PortfolioWeb that can:
   - [x] basic remote automation added
     - CI for build + test at minimum
   - [x] migration strategy for deployed environments decided
-  - [ ] define a minimum reproducible deployment flow for a fresh environment
-  - [ ] verify explicitly that the API container boots correctly with clean external configuration only
-
-## Recommended execution order
-1. Close deployment criteria
+  - [x] minimum reproducible deployment flow defined for a fresh environment
+  - [x] API container boot verified with clean external configuration only
 
 ## Out of scope for now
 - Frontend
@@ -122,3 +119,12 @@ We will consider the MVP closed when all of the following are true:
 - main validations resolved before persistence
 - automated tests covering happy path and relevant negative cases
 - reproducible deployment with reasonable external configuration
+
+## MVP status
+The backend MVP scope is considered closed.
+
+What remains next is no longer backend-MVP completion work, but follow-up product work such as:
+
+- frontend integration
+- backend refinements discovered during frontend integration
+- optional post-MVP improvements
